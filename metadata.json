@@ -1,0 +1,6 @@
+{
+  "name": "Groupe ETEC - École de Technologie et de Commerce",
+  "description": "Site officiel du Groupe ETEC, établissement d'enseignement supérieur technique et professionnel à Abidjan (Yopougon SIDECI et Port-Bouët Vridi). Formations d'excellence en BTS, Licence Professionnelle et Master Professionnel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
