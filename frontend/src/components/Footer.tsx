@@ -82,43 +82,7 @@ export const Footer: React.FC = () => {
 
           {/* Col 4: Quick Nav & Back to Top */}
           <div className="lg:col-span-2 space-y-3">
-            <h4 className="font-serif font-bold text-[#F5B51B] uppercase tracking-wider text-xs">
-              Navigation
-            </h4>
-            <ul className="space-y-2 text-white/85">
-              <li>
-                <a href="#presentation" className="hover:text-[#F5B51B] transition-colors">
-                  Présentation
-                </a>
-              </li>
-              <li>
-                <a href="#formations" className="hover:text-[#F5B51B] transition-colors">
-                  Filières BTS
-                </a>
-              </li>
-              <li>
-                <a href="#employabilite" className="hover:text-[#F5B51B] transition-colors">
-                  Insertion & Emploi
-                </a>
-              </li>
-              <li>
-                <a href="#tenue-reglementaire" className="hover:text-[#F5B51B] transition-colors">
-                  Tenue Réglementaire
-                </a>
-              </li>
-              <li>
-                <a href="#scolarite" className="hover:text-[#F5B51B] transition-colors">
-                  Frais & Bourses
-                </a>
-              </li>
-              <li>
-                <a href="#contact" className="hover:text-[#F5B51B] transition-colors">
-                  Contacts & Accès
-                </a>
-              </li>
-            </ul>
-
-            <div className="pt-4">
+            <div className="lg:pt-6">
               <button
                 onClick={scrollToTop}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-sm text-xs transition-colors cursor-pointer"

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { ArrowRight, CheckCircle2, ShieldCheck, FileCheck, Search, HelpCircle, PhoneCall } from 'lucide-react';
-import { INSTITUTION } from '../data/institutionData';
-import { Program, PROGRAMS } from '../data/programsData';
+import React from 'react';
+import { ArrowRight, CheckCircle2, FileCheck, Search } from 'lucide-react';
+import { Program } from '../data/programsData';
+import { DossierTracking } from './DossierTracking';
 
 interface PreRegistrationSectionProps {
   onOpenPreRegistration: (selectedProgram?: Program) => void;
@@ -10,24 +10,6 @@ interface PreRegistrationSectionProps {
 export const PreRegistrationSection: React.FC<PreRegistrationSectionProps> = ({
   onOpenPreRegistration,
 }) => {
-  const [trackingCode, setTrackingCode] = useState('');
-  const [trackingResult, setTrackingResult] = useState<string | null>(null);
-
-  const handleTrackDossier = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trackingCode.trim()) return;
-
-    if (trackingCode.toUpperCase().startsWith('ISTAG-')) {
-      setTrackingResult(
-        `Dossier ${trackingCode.toUpperCase()} : Pré-inscription bien enregistrée dans la base de l'ISTAG. Vous êtes attendu(e) au guichet scolarité du campus choisi muni de vos pièces justificatives.`
-      );
-    } else {
-      setTrackingResult(
-        `Le format du numéro de dossier doit être de type ISTAG-2026-XXXX. Pour tout renseignement, contactez la scolarité au ${INSTITUTION.contact.admissionsPhone}.`
-      );
-    }
-  };
-
   return (
     <section id="admissions" className="py-20 bg-[#056331] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -69,7 +51,7 @@ export const PreRegistrationSection: React.FC<PreRegistrationSectionProps> = ({
                     Émission instantanée de votre Récépissé Numérique
                   </h4>
                   <p className="text-xs text-white/80 mt-0.5">
-                    Téléchargez ou imprimez votre récépissé muni de votre numéro de dossier officiel ISTAG pour bloquer votre priorité d'admission.
+                    Joignez vos pièces justificatives en ligne et recevez votre numéro de dossier officiel ISTAG. La scolarité vérifie vos documents et vous contacte en cas de souci.
                   </p>
                 </div>
               </div>
@@ -132,13 +114,6 @@ export const PreRegistrationSection: React.FC<PreRegistrationSectionProps> = ({
                 </div>
               </div>
 
-              {/* Bouton principal vert avec texte blanc */}
-              <button
-                onClick={() => onOpenPreRegistration()}
-                className="w-full py-3.5 bg-[#08783F] hover:bg-[#056331] text-white font-bold text-xs rounded-sm transition-colors text-center cursor-pointer shadow-sm"
-              >
-                Commencer ma pré-inscription
-              </button>
             </div>
 
             {/* Existing File Tracking Box */}
@@ -148,30 +123,10 @@ export const PreRegistrationSection: React.FC<PreRegistrationSectionProps> = ({
                 <span>Vous avez déjà un numéro de dossier ?</span>
               </div>
               <p className="text-white/80 mb-3">
-                Entrez votre code (ex: <span className="font-mono text-[#F5B51B]">ISTAG-2026-4912</span>) pour vérifier l'état de votre dossier :
+                Entrez votre numéro de dossier (ex : <span className="font-mono text-[#F5B51B]">ISTAG-2026-0001</span>) et le téléphone indiqué lors de la pré-inscription pour voir l'état de votre dossier et renvoyer une pièce si la scolarité vous le demande :
               </p>
 
-              <form onSubmit={handleTrackDossier} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Code de dossier ISTAG"
-                  value={trackingCode}
-                  onChange={(e) => setTrackingCode(e.target.value)}
-                  className="grow px-3 py-2 text-xs bg-white text-[#1F2933] border border-transparent rounded-sm focus:outline-none focus:ring-1 focus:ring-[#F5B51B]"
-                />
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-[#F5B51B] hover:bg-[#FFC83D] text-[#1F2933] font-bold rounded-sm transition-colors cursor-pointer"
-                >
-                  Vérifier
-                </button>
-              </form>
-
-              {trackingResult && (
-                <div className="mt-3 p-3 bg-white/15 border border-white/25 rounded-sm text-white text-xs">
-                  {trackingResult}
-                </div>
-              )}
+              <DossierTracking variant="dark" />
             </div>
           </div>
         </div>

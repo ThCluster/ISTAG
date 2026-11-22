@@ -1,15 +1,13 @@
 import React from 'react';
-import { ArrowRight, BookOpen, CheckCircle2, ShieldCheck, MapPin, Sparkles, PhoneCall } from 'lucide-react';
-import { INSTITUTION } from '../data/institutionData';
+import { ArrowRight, BookOpen, ShieldCheck, MapPin } from 'lucide-react';
 import { Logo } from './Logo';
 
 interface HeroProps {
   onOpenPreRegistration: () => void;
   onExplorePrograms: () => void;
-  onOpenFlyer?: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onOpenPreRegistration, onExplorePrograms, onOpenFlyer }) => {
+export const Hero: React.FC<HeroProps> = ({ onOpenPreRegistration, onExplorePrograms }) => {
   return (
     <section className="relative min-h-[92vh] flex items-center justify-center pt-24 pb-16 bg-[#08783F] text-white overflow-hidden">
       {/* Background Photography with Measured Contrast Scrim - Utilise l'image de couverture PNG des étudiants ISTAG */}
@@ -58,16 +56,6 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPreRegistration, onExploreProg
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
 
-            {onOpenFlyer && (
-              <button
-                onClick={onOpenFlyer}
-                className="px-6 py-3.5 bg-white/15 hover:bg-white/25 text-white border border-white/35 font-semibold text-xs sm:text-sm rounded-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer backdrop-blur-sm whitespace-nowrap"
-              >
-                <Sparkles className="w-4 h-4 text-[#F5B51B]" />
-                <span>Voir le Flyer Officiel</span>
-              </button>
-            )}
-
             <button
               onClick={onExplorePrograms}
               className="px-6 py-3.5 bg-white/10 hover:bg-white/20 text-white border border-white/25 font-medium text-xs sm:text-sm rounded-sm transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer backdrop-blur-sm whitespace-nowrap"
@@ -88,29 +76,6 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPreRegistration, onExploreProg
               <MapPin className="w-4 h-4 text-[#F5B51B]" />
               <span>Gagnoa Garahio, Ex-Collège Les Alliances</span>
             </div>
-            <span aria-hidden="true" className="text-white/40">·</span>
-            <div className="flex items-center gap-1.5">
-              <PhoneCall className="w-4 h-4 text-[#F5B51B]" />
-              <span>07 07 48 60 50 / 01 42 89 18 84 / 05 64 21 43 73</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quantitative Stats Bar pinned cleanly inside the hero flow */}
-      <div className="absolute bottom-0 left-0 right-0 bg-[#056331] border-t border-[#08783F] py-4 sm:py-5 hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-4 gap-6 lg:gap-8">
-            {INSTITUTION.stats.map((stat, idx) => (
-              <div key={idx} className="flex flex-col border-l border-white/15 pl-4 sm:pl-5 first:border-l-0">
-                <span className="text-2xl lg:text-3xl font-bold font-serif text-[#F5B51B] tabular-nums">
-                  {stat.value}
-                </span>
-                <span className="text-xs text-white/80 mt-1 line-clamp-1">
-                  {stat.label}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
       </div>

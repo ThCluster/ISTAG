@@ -106,7 +106,7 @@ export const ProgramsSection: React.FC<ProgramsSectionProps> = ({
                       : 'bg-white text-stone-600 border-stone-200 hover:border-stone-400'
                   }`}
                 >
-                  {cat === 'Agro-Industrie & Mines' ? '🌱 Agro-Industrie & Mines (Gagnoa)' : cat}
+                  {cat === 'Agro-Industrie & Mines' ? 'Agro-Industrie & Mines (Gagnoa)' : cat}
                 </button>
               );
             })}
@@ -241,12 +241,6 @@ export const ProgramsSection: React.FC<ProgramsSectionProps> = ({
             >
               Prendre rendez-vous
             </a>
-            <button
-              onClick={() => onSelectProgramForRegistration(PROGRAMS[0])}
-              className="px-5 py-2.5 bg-[#F5B51B] hover:bg-[#FFC83D] text-[#1F2933] font-bold text-xs rounded-sm transition-all whitespace-nowrap cursor-pointer shadow-sm"
-            >
-              Candidater maintenant
-            </button>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Shirt, ShieldCheck, Sparkles, Users, Award, Upload, Image as ImageIcon, RotateCcw } from 'lucide-react';
+import { Shirt, ShieldCheck, Sparkles, Users, Award, Upload, RotateCcw } from 'lucide-react';
 
 export const TenueReglementaireSection: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -105,15 +105,6 @@ export const TenueReglementaireSection: React.FC = () => {
               <ShieldCheck className="w-4 h-4 text-[#08783F]" />
               {hasCustomPhoto ? "Photo originale chargée avec succès sans aucune retouche" : "Tenue réglementaire officielle — Promotion ISTAG Gagnoa"}
             </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="text-[#08783F] hover:underline font-medium cursor-pointer flex items-center gap-1"
-              >
-                <ImageIcon className="w-3.5 h-3.5" />
-                <span>{hasCustomPhoto ? "Changer la photo" : "Insérer votre fichier image.png original"}</span>
-              </button>
-            </div>
           </div>
         </div>
 

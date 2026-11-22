@@ -5,6 +5,7 @@ interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showText?: boolean;
   lightText?: boolean;
+  compact?: boolean;
 }
 
 export const Logo: React.FC<LogoProps> = ({
@@ -12,6 +13,7 @@ export const Logo: React.FC<LogoProps> = ({
   size = 'md',
   showText = false,
   lightText = true,
+  compact = false,
 }) => {
   const sizeMap = {
     sm: 'w-8 h-8',
@@ -70,6 +72,7 @@ export const Logo: React.FC<LogoProps> = ({
               GAGNOA
             </span>
           </div>
+          {!compact && (
           <span
             className={`text-[10px] tracking-wider uppercase font-semibold mt-1 ${
               lightText ? 'text-[#F5B51B]' : 'text-[#08783F]'
@@ -77,6 +80,7 @@ export const Logo: React.FC<LogoProps> = ({
           >
             Institut Supérieur des Technologies Avancées
           </span>
+          )}
         </div>
       )}
     </div>

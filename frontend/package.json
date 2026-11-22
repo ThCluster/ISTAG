@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "build:admin-css": "tailwindcss -i ../backend/tailwind/istag.css -o ../backend/admissions/static/istag/tailwind.css --minify && tailwindcss -i ../backend/tailwind/istag-admin.css -o ../backend/admissions/static/istag/tailwind-admin.css --minify"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -23,6 +24,7 @@
     "vite": "^8.3.0"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.5",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",

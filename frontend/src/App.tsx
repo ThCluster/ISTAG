@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
-import { FlyerAnnouncementBanner } from './components/FlyerAnnouncementBanner';
 import { FlyerShowcaseModal } from './components/FlyerShowcaseModal';
 import { PresentationSection } from './components/PresentationSection';
 import { ProgramsSection } from './components/ProgramsSection';
@@ -143,13 +142,6 @@ export default function App() {
         <Hero
           onOpenPreRegistration={() => navigateToInscription()}
           onExplorePrograms={handleExplorePrograms}
-          onOpenFlyer={() => setIsFlyerModalOpen(true)}
-        />
-
-        {/* Official Flyer & Campus Gagnoa Announcement Banner */}
-        <FlyerAnnouncementBanner
-          onOpenFlyerModal={() => setIsFlyerModalOpen(true)}
-          onOpenPreRegistration={() => navigateToInscription()}
         />
 
         {/* 01. Institution & History Presentation */}

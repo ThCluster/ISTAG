@@ -1,8 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CheckCircle2, Printer, ArrowRight, ShieldCheck, PhoneCall, Building2, User, GraduationCap, FileText, Search, Sparkles, MessageSquare } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Printer, ArrowRight, ShieldCheck, PhoneCall, Search, MessageSquare, Upload, Loader2, FileText, X } from 'lucide-react';
 import { PROGRAMS, Program } from '../data/programsData';
 import { CAMPUSES, INSTITUTION } from '../data/institutionData';
 import { Logo } from '../components/Logo';
+import { DossierTracking } from '../components/DossierTracking';
+import {
+  ApiError,
+  EXTENSIONS_ACCEPTEES,
+  PIECE_DU_CHAMP,
+  PIECES,
+  PieceType,
+  soumettrePreinscription,
+  verifierFichier,
+} from '../api/admissions';
+
+// Champ de l'API → [champ du formulaire, étape] pour afficher les erreurs du serveur au bon endroit.
+const CHAMP_API_VERS_FORM: Record<string, [string, number]> = {
+  niveau: ['programId', 1], filiere_id: ['programId', 1], filiere_nom: ['programId', 1],
+  campus_id: ['campusId', 1], campus_nom: ['campusId', 1], regime: ['campusId', 1],
+  nom: ['lastName', 2], prenoms: ['firstNames', 2], date_naissance: ['birthDate', 2],
+  genre: ['gender', 2], nationalite: ['nationality', 2], telephone: ['phone', 2],
+  whatsapp: ['whatsapp', 2], email: ['email', 2], ville_residence: ['residenceCity', 2],
+  dernier_diplome: ['lastDegree', 3], serie: ['bacSeries', 3], mention: ['mention', 3],
+  etablissement_origine: ['lastSchool', 3], annee_obtention: ['graduationYear', 3],
+  consentement: ['consentement', 4],
+};
+
+const formaterTaille = (octets: number) =>
+  octets < 1024 * 1024 ? `${Math.round(octets / 1024)} Ko` : `${(octets / (1024 * 1024)).toFixed(1)} Mo`;
 
 interface PreRegistrationPageProps {
   initialProgram?: Program | null;
@@ -28,11 +53,11 @@ interface RegistrationFormData {
   lastSchool: string;
   graduationYear: string;
   mention: string;
-  hasBirthCert: boolean;
-  hasDiplomaCopy: boolean;
-  hasIdCard: boolean;
-  hasPhotos: boolean;
+  consentement: boolean;
+  siteWeb: string; // champ piège anti-robots, reste vide pour un humain
 }
+
+const diplomeEnCours = (mention: string) => mention.toLowerCase().startsWith('en cours');
 
 export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
   initialProgram,
@@ -43,10 +68,11 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
   const [registrationCode, setRegistrationCode] = useState<string>('');
   const [submittedAt, setSubmittedAt] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'new' | 'check'>('new');
-  const [trackingInput, setTrackingInput] = useState('');
-  const [trackingResult, setTrackingResult] = useState<string | null>(null);
+  const [files, setFiles] = useState<Partial<Record<PieceType, File>>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState<RegistrationFormData>({
+  const initialFormData = (): RegistrationFormData => ({
     degreeLevel: initialProgram ? initialProgram.degreeLevel : 'BTS',
     programId: initialProgram ? initialProgram.id : 'bts-mgp',
     campusId: 'campus-gagnoa',
@@ -65,11 +91,11 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
     lastSchool: '',
     graduationYear: '2026',
     mention: 'Passable',
-    hasBirthCert: true,
-    hasDiplomaCopy: true,
-    hasIdCard: true,
-    hasPhotos: true,
+    consentement: false,
+    siteWeb: '',
   });
+
+  const [formData, setFormData] = useState<RegistrationFormData>(initialFormData);
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
@@ -112,33 +138,127 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
     } else if (step === 3) {
       if (!formData.lastSchool.trim()) newErrors.lastSchool = "L'établissement d'origine est requis.";
       if (!formData.graduationYear.trim()) newErrors.graduationYear = "L'année d'obtention est requise.";
+    } else if (step === 4) {
+      for (const { type } of PIECES) {
+        const optionnel = type === 'diplome' && diplomeEnCours(formData.mention);
+        if (!files[type] && !optionnel) newErrors[`piece_${type}`] = 'Ce document est obligatoire.';
+      }
+      if (!formData.consentement) {
+        newErrors.consentement = 'Vous devez accepter pour envoyer votre dossier.';
+      }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      if (currentStep < 4) {
-        setCurrentStep((prev) => prev + 1);
-        window.scrollTo({ top: 120, behavior: 'smooth' });
-      } else {
-        // Generate registration dossier code
-        const randomNum = Math.floor(1000 + Math.random() * 9000);
-        const code = `ISTAG-2026-${randomNum}`;
-        const dateStr = new Date().toLocaleDateString('fr-FR', {
+  const handleFileChange = (type: PieceType, file: File | undefined) => {
+    const key = `piece_${type}`;
+    if (!file) return;
+    const probleme = verifierFichier(file);
+    if (probleme) {
+      setErrors({ ...errors, [key]: probleme });
+      return;
+    }
+    setFiles({ ...files, [type]: file });
+    const { [key]: _, ...reste } = errors;
+    setErrors(reste);
+  };
+
+  const removeFile = (type: PieceType) => {
+    const { [type]: _, ...reste } = files;
+    setFiles(reste);
+  };
+
+  const submitRegistration = async () => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const result = await soumettrePreinscription(
+        {
+          niveau: formData.degreeLevel,
+          filiere_id: formData.programId,
+          filiere_nom: selectedProgramObj.title,
+          campus_id: formData.campusId,
+          campus_nom: selectedCampusObj.name,
+          regime: formData.scheduleType,
+          nom: formData.lastName.trim(),
+          prenoms: formData.firstNames.trim(),
+          date_naissance: formData.birthDate,
+          genre: formData.gender,
+          nationalite: formData.nationality,
+          telephone: formData.phone.trim(),
+          whatsapp: formData.whatsapp.trim(),
+          email: formData.email.trim(),
+          ville_residence: formData.residenceCity,
+          dernier_diplome: formData.lastDegree,
+          serie: formData.bacSeries,
+          etablissement_origine: formData.lastSchool.trim(),
+          annee_obtention: formData.graduationYear.trim(),
+          mention: formData.mention,
+          consentement: formData.consentement,
+          site_web: formData.siteWeb,
+        },
+        files
+      );
+      setRegistrationCode(result.numero_dossier);
+      setSubmittedAt(
+        new Date(result.date_creation).toLocaleDateString('fr-FR', {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
-        });
-        setRegistrationCode(code);
-        setSubmittedAt(dateStr);
-        setSubmissionSuccess(true);
+        })
+      );
+      setSubmissionSuccess(true);
+    } catch (err) {
+      if (!(err instanceof ApiError)) {
+        setSubmitError('Une erreur inattendue est survenue. Veuillez réessayer.');
+        return;
       }
+      // Replace les erreurs du serveur sur les bons champs et revient à la première étape concernée.
+      const newErrors: { [key: string]: string } = {};
+      const details: string[] = [];
+      let firstStep = 5;
+      for (const [champ, msg] of Object.entries(err.fieldErrors)) {
+        const piece = PIECE_DU_CHAMP[champ];
+        if (piece) {
+          newErrors[`piece_${piece}`] = msg;
+          firstStep = Math.min(firstStep, 4);
+        } else if (CHAMP_API_VERS_FORM[champ]) {
+          const [cle, etape] = CHAMP_API_VERS_FORM[champ];
+          newErrors[cle] = msg;
+          firstStep = Math.min(firstStep, etape);
+        }
+        details.push(msg);
+      }
+      setErrors(newErrors);
+      if (firstStep < 5) setCurrentStep(firstStep);
+      setSubmitError(details.length ? `${err.message} ${details.join(' ')}` : err.message);
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleNext = () => {
+    if (isSubmitting || !validateStep(currentStep)) return;
+    if (currentStep < 4) {
+      setSubmitError(null);
+      setCurrentStep((prev) => prev + 1);
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+    } else {
+      submitRegistration();
+    }
+  };
+
+  const startNewRegistration = () => {
+    setFormData(initialFormData());
+    setFiles({});
+    setErrors({});
+    setSubmitError(null);
+    setSubmissionSuccess(false);
+    setCurrentStep(1);
   };
 
   const handlePrev = () => {
@@ -150,21 +270,6 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleTrackSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trackingInput.trim()) return;
-
-    if (trackingInput.toUpperCase().startsWith('ISTAG-')) {
-      setTrackingResult(
-        `Dossier ${trackingInput.toUpperCase()} : Pré-inscription validée et enregistrée auprès du secrétariat de l'ISTAG. Statut : En attente du dépôt des pièces physiques à la scolarité.`
-      );
-    } else {
-      setTrackingResult(
-        `Le format saisi est non reconnu. Les numéros officiels de pré-inscription sont au format ISTAG-2026-XXXX. En cas de doute, appelez le ${INSTITUTION.contact.admissionsPhone}.`
-      );
-    }
   };
 
   return (
@@ -267,31 +372,10 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
                 Retrouvez les informations de votre pré-inscription
               </h2>
               <p className="text-xs sm:text-sm text-[#667085]">
-                Saisissez le numéro de dossier qui vous a été délivré lors de votre enregistrement en ligne (ex: <span className="font-mono font-semibold text-[#08783F]">ISTAG-2026-4821</span>) :
+                Saisissez le numéro inscrit sur votre récépissé (ex : <span className="font-mono font-semibold text-[#08783F]">ISTAG-2026-0001</span>) et le téléphone indiqué lors de la pré-inscription. Si la scolarité a signalé un document non conforme, vous pourrez le renvoyer ici.
               </p>
 
-              <form onSubmit={handleTrackSubmit} className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Numéro de dossier ISTAG"
-                  value={trackingInput}
-                  onChange={(e) => setTrackingInput(e.target.value)}
-                  className="grow px-4 py-3 text-sm bg-stone-50 border border-stone-300 rounded-sm focus:outline-none focus:border-[#08783F] focus:ring-1 focus:ring-[#08783F] font-mono uppercase"
-                />
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-[#08783F] hover:bg-[#056331] text-white font-bold text-xs rounded-sm transition-colors cursor-pointer"
-                >
-                  Vérifier le statut
-                </button>
-              </form>
-
-              {trackingResult && (
-                <div className="p-4 bg-stone-50 border border-stone-300 rounded-sm text-xs text-[#1F2933] space-y-2">
-                  <span className="font-bold text-[#08783F] block">Résultat de la recherche :</span>
-                  <p className="text-[#667085]">{trackingResult}</p>
-                </div>
-              )}
+              <DossierTracking variant="light" />
 
               <div className="pt-4 border-t border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-[#667085] gap-3">
                 <span>Vous n'avez pas encore rempli de formulaire ?</span>
@@ -449,13 +533,17 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
                         Modalités pour valider définitivement votre admission :
                       </strong>
                       <p className="text-[#667085] leading-relaxed">
-                        1. Présentez ce document imprimé au guichet de la scolarité du <strong>{selectedCampusObj.name}</strong> ({selectedCampusObj.district}).
+                        1. Vos pièces justificatives ont été transmises en ligne :{' '}
+                        <strong className="text-[#1F2933]">
+                          {PIECES.filter(({ type }) => files[type]).map(({ label }) => label).join(' · ')}
+                        </strong>
+                        . La scolarité les vérifie et vous contactera au <strong>{formData.phone}</strong> si un document doit être corrigé.
                       </p>
                       <p className="text-[#667085] leading-relaxed">
-                        2. Pièces requises à joindre : Extrait d'acte de naissance, 2 copies certifiées du diplôme ou collations du BAC, 4 photos d'identité couleur, copie de la CNI/Passeport.
+                        2. Suivez votre dossier en ligne (rubrique « Consulter mon Dossier ») avec votre numéro <strong className="font-mono">{registrationCode}</strong> et votre téléphone. Vous pourrez y renvoyer un document signalé non conforme.
                       </p>
                       <p className="text-[#667085] leading-relaxed">
-                        3. Règlement des frais d'inscription pour l'émission de la carte d'étudiant et l'attribution définitive de votre place.
+                        3. Une fois votre dossier validé, présentez ce récépissé et les originaux de vos pièces au guichet de la scolarité du <strong>{selectedCampusObj.name}</strong> ({selectedCampusObj.district}), puis réglez les frais d'inscription pour recevoir votre carte d'étudiant.
                       </p>
                     </div>
 
@@ -475,10 +563,7 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
                   {/* Return buttons */}
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-stone-200 no-print">
                     <button
-                      onClick={() => {
-                        setSubmissionSuccess(false);
-                        setCurrentStep(1);
-                      }}
+                      onClick={startNewRegistration}
                       className="text-xs font-semibold text-[#667085] hover:text-[#08783F] cursor-pointer underline"
                     >
                       Effectuer une autre pré-inscription
@@ -506,7 +591,7 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
                         {currentStep === 1 && '1. Choix du Diplôme, de la Filière & du Campus'}
                         {currentStep === 2 && '2. Identité & Coordonnées du Candidat'}
                         {currentStep === 3 && '3. Cursus Antérieur & Établissement d\'Origine'}
-                        {currentStep === 4 && '4. Checklist des Pièces Justificatives'}
+                        {currentStep === 4 && '4. Envoi des Pièces Justificatives'}
                       </h2>
                     </div>
 
@@ -904,82 +989,105 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
                     {/* STEP 4: Documents checklist */}
                     {currentStep === 4 && (
                       <div className="space-y-6">
-                        <div className="space-y-3 bg-stone-50 p-5 border border-stone-200 rounded-sm">
-                          <label className="flex items-start gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={formData.hasBirthCert}
-                              onChange={(e) =>
-                                setFormData({ ...formData, hasBirthCert: e.target.checked })
-                              }
-                              className="mt-1 accent-[#08783F]"
-                            />
-                            <div>
-                              <span className="text-xs font-bold text-[#1F2933] block">
-                                Extrait d'acte de naissance (Original ou copie légalisée)
-                              </span>
-                              <span className="text-[11px] text-[#667085]">
-                                Requis pour l'immatriculation au Ministère de l'Enseignement Supérieur
-                              </span>
-                            </div>
-                          </label>
+                        <div className="p-4 bg-stone-50 border border-stone-200 rounded-sm text-xs text-[#667085] flex items-start gap-2">
+                          <FileText className="w-4 h-4 text-[#08783F] shrink-0 mt-0.5" />
+                          <p>
+                            Joignez une photo nette ou un scan de chaque document (<strong>PDF, JPG ou PNG, 5 Mo maximum</strong>).
+                            La scolarité les vérifie et vous contacte si l'un d'eux doit être corrigé : vous évitez ainsi un déplacement inutile.
+                          </p>
+                        </div>
 
-                          <label className="flex items-start gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={formData.hasDiplomaCopy}
-                              onChange={(e) =>
-                                setFormData({ ...formData, hasDiplomaCopy: e.target.checked })
-                              }
-                              className="mt-1 accent-[#08783F]"
-                            />
-                            <div>
-                              <span className="text-xs font-bold text-[#1F2933] block">
-                                Copie légalisée de la Collation / Attestation du Bac ou diplôme précédent
-                              </span>
-                              <span className="text-[11px] text-[#667085]">
-                                Justificatif officiel de votre niveau d'études
-                              </span>
-                            </div>
-                          </label>
+                        <div className="space-y-3">
+                          {PIECES.map(({ type, label, hint }) => {
+                            const file = files[type];
+                            const optionnel = type === 'diplome' && diplomeEnCours(formData.mention);
+                            const erreur = errors[`piece_${type}`];
+                            return (
+                              <div
+                                key={type}
+                                className={`p-4 border rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                                  erreur
+                                    ? 'border-red-300 bg-red-50/40'
+                                    : file
+                                    ? 'border-[#08783F]/40 bg-[#08783F]/5'
+                                    : 'border-stone-200 bg-white'
+                                }`}
+                              >
+                                <div className="min-w-0">
+                                  <span className="text-xs font-bold text-[#1F2933] block">
+                                    {label} {optionnel ? <span className="font-normal text-[#667085]">(facultatif — diplôme en cours)</span> : '*'}
+                                  </span>
+                                  <span className="text-[11px] text-[#667085] block">{hint}</span>
+                                  {file && (
+                                    <span className="mt-1 text-[11px] text-[#08783F] font-medium flex items-center gap-1 min-w-0">
+                                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                      <span className="truncate">{file.name}</span>
+                                      <span className="shrink-0 text-[#667085]">({formaterTaille(file.size)})</span>
+                                    </span>
+                                  )}
+                                  {erreur && <p className="text-red-600 text-xs mt-1">{erreur}</p>}
+                                </div>
 
-                          <label className="flex items-start gap-3 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={formData.hasIdCard}
-                              onChange={(e) =>
-                                setFormData({ ...formData, hasIdCard: e.target.checked })
-                              }
-                              className="mt-1 accent-[#08783F]"
-                            />
-                            <div>
-                              <span className="text-xs font-bold text-[#1F2933] block">
-                                Copie de la Carte Nationale d'Identité (CNI) ou Passeport
-                              </span>
-                              <span className="text-[11px] text-[#667085]">
-                                Document d'identité en cours de validité
-                              </span>
-                            </div>
-                          </label>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {file && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeFile(type)}
+                                      className="p-2 text-[#667085] hover:text-red-600 cursor-pointer"
+                                      aria-label={`Retirer ${label}`}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                  <label className="px-4 py-2 border border-[#08783F] text-[#08783F] text-xs font-bold rounded-sm cursor-pointer hover:bg-[#08783F]/5 flex items-center gap-1.5">
+                                    <Upload className="w-3.5 h-3.5" />
+                                    <span>{file ? 'Changer' : 'Choisir un fichier'}</span>
+                                    <input
+                                      type="file"
+                                      accept={EXTENSIONS_ACCEPTEES}
+                                      className="sr-only"
+                                      onChange={(e) => {
+                                        handleFileChange(type, e.target.files?.[0]);
+                                        e.target.value = '';
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
 
-                          <label className="flex items-start gap-3 cursor-pointer">
+                        {/* Champ piège anti-robots : invisible et ignoré par les humains */}
+                        <div aria-hidden="true" className="absolute -left-[9999px] w-px h-px overflow-hidden">
+                          <label>
+                            Site web
+                            <input
+                              type="text"
+                              tabIndex={-1}
+                              autoComplete="off"
+                              value={formData.siteWeb}
+                              onChange={(e) => setFormData({ ...formData, siteWeb: e.target.value })}
+                            />
+                          </label>
+                        </div>
+
+                        <div>
+                          <label className="flex items-start gap-3 cursor-pointer text-xs text-[#1F2933]">
                             <input
                               type="checkbox"
-                              checked={formData.hasPhotos}
-                              onChange={(e) =>
-                                setFormData({ ...formData, hasPhotos: e.target.checked })
-                              }
-                              className="mt-1 accent-[#08783F]"
+                              checked={formData.consentement}
+                              onChange={(e) => setFormData({ ...formData, consentement: e.target.checked })}
+                              className="mt-0.5 accent-[#08783F]"
                             />
-                            <div>
-                              <span className="text-xs font-bold text-[#1F2933] block">
-                                4 Photos d'identité récentes couleur sur fond blanc
-                              </span>
-                              <span className="text-[11px] text-[#667085]">
-                                Destinées à votre dossier physique et à la carte d'étudiant ISTAG
-                              </span>
-                            </div>
+                            <span>
+                              J'atteste l'exactitude des informations fournies et j'accepte que l'ISTAG conserve et utilise
+                              mes données et documents uniquement pour le traitement de ma candidature. *
+                            </span>
                           </label>
+                          {errors.consentement && (
+                            <p className="text-red-600 text-xs mt-1">{errors.consentement}</p>
+                          )}
                         </div>
 
                         {/* Recap box */}
@@ -997,6 +1105,12 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
                             <strong>Campus retenu :</strong> {selectedCampusObj.name}
                           </p>
                         </div>
+                      </div>
+                    )}
+
+                    {submitError && (
+                      <div role="alert" className="mt-6 p-3 bg-red-50 border border-red-200 rounded-sm text-xs text-red-800">
+                        {submitError}
                       </div>
                     )}
 
@@ -1025,10 +1139,21 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
                       <button
                         type="button"
                         onClick={handleNext}
-                        className="px-7 py-3 bg-[#08783F] hover:bg-[#056331] text-white font-bold text-xs rounded-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+                        disabled={isSubmitting}
+                        className="px-7 py-3 bg-[#08783F] hover:bg-[#056331] text-white font-bold text-xs rounded-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-wait"
                       >
-                        <span>{currentStep === 4 ? 'Valider et Obtenir mon Récépissé' : 'Continuer'}</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-[#F5B51B]" />
+                        <span>
+                          {currentStep < 4
+                            ? 'Continuer'
+                            : isSubmitting
+                            ? 'Envoi du dossier en cours…'
+                            : 'Envoyer mon dossier et obtenir mon récépissé'}
+                        </span>
+                        {isSubmitting ? (
+                          <Loader2 className="w-3.5 h-3.5 text-[#F5B51B] animate-spin" />
+                        ) : (
+                          <ArrowRight className="w-3.5 h-3.5 text-[#F5B51B]" />
+                        )}
                       </button>
                     </div>
                   </div>

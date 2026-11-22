@@ -335,14 +335,6 @@ export const TuitionSection: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-2">
-                <a
-                  href="#admissions"
-                  className="block w-full py-3 bg-[#F5B51B] hover:bg-[#FFC83D] text-[#1F2933] font-bold text-xs uppercase tracking-wider text-center rounded-sm transition-colors"
-                >
-                  Entamer ma Pré-inscription en Ligne
-                </a>
-              </div>
             </div>
           </div>
         </div>

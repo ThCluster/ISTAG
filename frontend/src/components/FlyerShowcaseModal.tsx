@@ -221,18 +221,18 @@ export const FlyerShowcaseModal: React.FC<FlyerShowcaseModalProps> = ({
                     </h3>
                   </div>
                   <ul className="space-y-1 text-xs text-stone-800 max-h-48 overflow-y-auto pr-1">
-                    <li>✔ BTS Finance comptabilité (FCGE)</li>
-                    <li>✔ BTS Gestion Commerciale</li>
-                    <li>✔ BTS RH et Communications</li>
-                    <li>✔ BTS Assistanat de Direction</li>
-                    <li>✔ BTS Logistique</li>
-                    <li>✔ BTS Informatique Développeur (IDA)</li>
-                    <li>✔ BTS Réseaux Télécoms (RIT)</li>
-                    <li>✔ BTS Systèmes Électroniques (SEI)</li>
-                    <li>✔ BTS Agriculture (Option Animale)</li>
-                    <li>✔ BTS Agriculture (Option Végétale)</li>
-                    <li>✔ BTS Génie Civil (Option Bâtiment)</li>
-                    <li>✔ BTS Touristique et Hôtellerie</li>
+                    <li>BTS Finance comptabilité (FCGE)</li>
+                    <li>BTS Gestion Commerciale</li>
+                    <li>BTS RH et Communications</li>
+                    <li>BTS Assistanat de Direction</li>
+                    <li>BTS Logistique</li>
+                    <li>BTS Informatique Développeur (IDA)</li>
+                    <li>BTS Réseaux Télécoms (RIT)</li>
+                    <li>BTS Systèmes Électroniques (SEI)</li>
+                    <li>BTS Agriculture (Option Animale)</li>
+                    <li>BTS Agriculture (Option Végétale)</li>
+                    <li>BTS Génie Civil (Option Bâtiment)</li>
+                    <li>BTS Touristique et Hôtellerie</li>
                   </ul>
                   <div className="pt-2 border-t border-emerald-200 bg-white p-2.5 rounded border border-emerald-200 text-center">
                     <span className="text-[11px] uppercase font-bold text-stone-500 block">Frais Inscription BTS</span>
@@ -254,14 +254,14 @@ export const FlyerShowcaseModal: React.FC<FlyerShowcaseModalProps> = ({
                     </h3>
                   </div>
                   <ul className="space-y-1 text-xs text-stone-800">
-                    <li>✔ Finance Comptabilité</li>
-                    <li>✔ Banque et Assurance</li>
-                    <li>✔ Gestion des Ressources Humaines</li>
-                    <li>✔ Gestion des Projets</li>
-                    <li>✔ Informatique (Génie Logiciel)</li>
-                    <li>✔ Transport & Logistique</li>
-                    <li>✔ Audit et Contrôle</li>
-                    <li>✔ Marketing, Management & Com</li>
+                    <li>Finance Comptabilité</li>
+                    <li>Banque et Assurance</li>
+                    <li>Gestion des Ressources Humaines</li>
+                    <li>Gestion des Projets</li>
+                    <li>Informatique (Génie Logiciel)</li>
+                    <li>Transport & Logistique</li>
+                    <li>Audit et Contrôle</li>
+                    <li>Marketing, Management & Com</li>
                   </ul>
                   <div className="pt-2 border-t border-blue-200 bg-white p-2.5 rounded border border-blue-200 text-center">
                     <span className="text-[11px] uppercase font-bold text-stone-500 block">Frais Inscription / An</span>
@@ -278,7 +278,7 @@ export const FlyerShowcaseModal: React.FC<FlyerShowcaseModalProps> = ({
               {/* Bottom Location Banner from Flyer */}
               <div className="p-4 bg-[#F5B51B] text-[#1F2933] rounded-sm font-bold text-center text-sm sm:text-base border border-amber-400 flex flex-col sm:flex-row items-center justify-center gap-2">
                 <MapPin className="w-5 h-5 text-[#056331]" />
-                <span>📍 GAGNOA GARAHIO, EX COLLEGE ALLIANCE</span>
+                <span>GAGNOA GARAHIO, EX COLLEGE ALLIANCE</span>
               </div>
             </div>
           )}
