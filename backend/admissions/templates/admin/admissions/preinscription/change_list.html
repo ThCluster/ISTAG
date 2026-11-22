@@ -1,0 +1,192 @@
+{% extends "istag/base_tw.html" %}
+
+{% block titre %}Dossiers · ISTAG Scolarité{% endblock %}
+
+{% block page %}
+{% include "istag/entete.html" %}
+
+<main class="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+  {% include "istag/messages.html" %}
+
+  {# ---------- Titre + recherche ---------- #}
+  <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between animate-apparition">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-wider text-istag">Pré-inscriptions 2026 – 2027</p>
+      <h1 class="mt-1 font-serif text-3xl font-bold">Dossiers des candidats</h1>
+      <p class="mt-1 text-slate-500">
+        {{ cl.result_count }} dossier{{ cl.result_count|pluralize }}{% if cl.result_count != cl.full_result_count %} sur {{ cl.full_result_count }}{% endif %}
+      </p>
+    </div>
+    <form method="get" class="relative w-full md:w-96" role="search">
+      {% for cle, valeur in parametres_conserves %}<input type="hidden" name="{{ cle }}" value="{{ valeur }}">{% endfor %}
+      <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+        {% include "istag/icone.html" with nom="loupe" classe="h-5 w-5" %}
+      </span>
+      <input type="search" name="q" value="{{ recherche }}" placeholder="Nom, téléphone ou n° de dossier…"
+             class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-[15px] shadow-sm outline-none transition placeholder:text-slate-400 focus:border-istag focus:ring-4 focus:ring-istag/15">
+    </form>
+  </div>
+
+  {# ---------- Onglets par statut ---------- #}
+  <nav class="mt-6 flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par statut">
+    {% for o in onglets %}
+      <a href="{{ o.url }}"
+         class="inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition
+                {% if o.actif %}bg-istag text-white shadow-md shadow-istag/25{% else %}bg-white text-slate-600 ring-1 ring-slate-200 hover:text-istag hover:ring-istag/40{% endif %}">
+        {{ o.libelle }}
+        <span class="rounded-full px-2 py-0.5 text-xs {% if o.actif %}bg-white/25{% else %}bg-slate-100 text-slate-500{% endif %}">{{ o.nombre }}</span>
+      </a>
+    {% endfor %}
+  </nav>
+
+  <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_260px]">
+
+    {# ---------- Tableau ---------- #}
+    <form method="post" id="changelist-form" class="min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="index" value="0">
+      <input type="hidden" name="select_across" value="0">
+
+      {% if actions_choix and cl.result_list %}
+        <div class="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3 text-sm">
+          <select name="action" class="rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:border-istag">
+            <option value="">Action sur la sélection…</option>
+            {% for valeur, libelle in actions_choix %}<option value="{{ valeur }}">{{ libelle }}</option>{% endfor %}
+          </select>
+          <button type="submit"
+                  class="rounded-lg bg-encre px-4 py-2 font-semibold text-white transition hover:bg-black">Appliquer</button>
+          <span class="text-slate-500"><span id="nb-selection">0</span> sélectionné(s)</span>
+        </div>
+      {% endif %}
+
+      {% if cl.result_list %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-xs uppercase tracking-wider text-slate-400">
+              <tr class="border-b border-slate-100">
+                <th class="w-10 px-5 py-3"><input type="checkbox" id="tout-cocher" class="h-4 w-4 accent-istag" aria-label="Tout sélectionner"></th>
+                <th class="py-3 pr-4 font-semibold">Candidat</th>
+                <th class="py-3 pr-4 font-semibold">Filière</th>
+                <th class="py-3 pr-4 font-semibold">Statut</th>
+                <th class="py-3 pr-4 font-semibold">Pièces</th>
+                <th class="py-3 pr-4 font-semibold">Reçu</th>
+                <th class="py-3 pr-5"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for d in cl.result_list %}
+                {% url 'admin:admissions_preinscription_change' d.pk as url_fiche %}
+                <tr class="group transition hover:bg-brume/80">
+                  <td class="px-5 py-3.5"><input type="checkbox" name="_selected_action" value="{{ d.pk }}" class="ligne h-4 w-4 accent-istag" aria-label="Sélectionner {{ d.nom_complet }}"></td>
+                  <td class="py-3.5 pr-4">
+                    <a href="{{ url_fiche }}" class="flex items-center gap-3">
+                      {% with photo=d.photo %}
+                        {% if photo and photo.est_image %}
+                          <img src="{% url 'piece-fichier' photo.pk %}" alt="" class="h-11 w-11 shrink-0 rounded-xl object-cover ring-1 ring-slate-200">
+                        {% else %}
+                          <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-istag/10 text-sm font-extrabold text-istag">{{ d.initiales }}</span>
+                        {% endif %}
+                      {% endwith %}
+                      <span class="min-w-0">
+                        <span class="block truncate font-semibold text-encre group-hover:text-istag">{{ d.nom_complet }}</span>
+                        <span class="block font-mono text-xs text-slate-400">{{ d.numero_dossier }} · {{ d.telephone }}</span>
+                      </span>
+                    </a>
+                  </td>
+                  <td class="max-w-[220px] py-3.5 pr-4">
+                    <span class="line-clamp-2 text-slate-700">{{ d.filiere_nom }}</span>
+                    <span class="text-xs text-slate-400">{{ d.niveau }} · {{ d.regime }}</span>
+                  </td>
+                  <td class="py-3.5 pr-4">
+                    <span class="inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ d.badge_classes }}">{{ d.get_statut_display }}</span>
+                  </td>
+                  <td class="py-3.5 pr-4">
+                    <span class="flex gap-1">
+                      {% for p in d.pastilles %}
+                        <span title="{{ p.titre }}" class="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold ring-1 ring-inset {{ p.classes }}">{{ p.lettre }}</span>
+                      {% endfor %}
+                    </span>
+                  </td>
+                  <td class="whitespace-nowrap py-3.5 pr-4 text-slate-500">
+                    {{ d.date_creation|date:"d/m/Y" }}
+                    <span class="block text-xs text-slate-400">{{ d.date_creation|date:"H:i" }}</span>
+                  </td>
+                  <td class="py-3.5 pr-5 text-right">
+                    <a href="{{ url_fiche }}"
+                       class="inline-flex items-center gap-1.5 rounded-lg bg-istag px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-istag-fonce">
+                      Ouvrir {% include "istag/icone.html" with nom="fleche" classe="h-3.5 w-3.5" %}
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if pagination %}
+          <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-sm">
+            {% if pagination.precedente %}<a href="{{ pagination.precedente }}" class="font-semibold text-istag hover:underline">Précédent</a>{% else %}<span></span>{% endif %}
+            <div class="flex gap-1">
+              {% for p in pagination.pages %}
+                {% if p.ellipse %}<span class="px-2 text-slate-400">…</span>
+                {% else %}
+                  <a href="{{ p.url }}" class="flex h-8 min-w-8 items-center justify-center rounded-lg px-2 font-semibold {% if p.actif %}bg-istag text-white{% else %}text-slate-600 hover:bg-slate-100{% endif %}">{{ p.num }}</a>
+                {% endif %}
+              {% endfor %}
+            </div>
+            {% if pagination.suivante %}<a href="{{ pagination.suivante }}" class="font-semibold text-istag hover:underline">Suivant</a>{% else %}<span></span>{% endif %}
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="flex flex-col items-center px-6 py-16 text-center">
+          <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+            {% include "istag/icone.html" with nom="inbox" classe="h-7 w-7" %}
+          </span>
+          <p class="mt-4 font-semibold">Aucun dossier ici</p>
+          <p class="mt-1 text-sm text-slate-500">
+            {% if recherche or filtre_actif %}Aucun résultat pour cette recherche ou ce filtre.{% else %}Les pré-inscriptions envoyées depuis le site apparaîtront ici.{% endif %}
+          </p>
+          {% if recherche or filtre_actif %}
+            <a href="{{ request.path }}" class="mt-4 text-sm font-semibold text-istag hover:underline">Effacer les filtres</a>
+          {% endif %}
+        </div>
+      {% endif %}
+    </form>
+
+    {# ---------- Filtres ---------- #}
+    <aside class="space-y-4">
+      {% for f in filtres %}
+        <div class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <p class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">{{ f.titre|capfirst }}</p>
+          <ul class="space-y-0.5">
+            {% for c in f.choix %}
+              <li>
+                <a href="{{ c.query_string|iriencode }}"
+                   class="block truncate rounded-lg px-2.5 py-1.5 text-sm transition {% if c.selected %}bg-istag/10 font-semibold text-istag{% else %}text-slate-600 hover:bg-slate-50 hover:text-encre{% endif %}">{{ c.display }}</a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </aside>
+  </div>
+</main>
+
+<script>
+  // Cases à cocher : tout sélectionner + compteur
+  (function () {
+    var tout = document.getElementById('tout-cocher');
+    var lignes = Array.prototype.slice.call(document.querySelectorAll('input.ligne'));
+    var compteur = document.getElementById('nb-selection');
+    function maj() {
+      var n = lignes.filter(function (c) { return c.checked; }).length;
+      if (compteur) compteur.textContent = n;
+      if (tout) tout.checked = n > 0 && n === lignes.length;
+    }
+    if (tout) tout.addEventListener('change', function () {
+      lignes.forEach(function (c) { c.checked = tout.checked; }); maj();
+    });
+    lignes.forEach(function (c) { c.addEventListener('change', maj); });
+  })();
+</script>
+{% endblock %}

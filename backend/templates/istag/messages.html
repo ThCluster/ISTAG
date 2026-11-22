@@ -1,0 +1,14 @@
+{% if messages %}
+  <ul class="mb-6 space-y-2">
+    {% for message in messages %}
+      <li class="flex items-start gap-3 rounded-xl border px-4 py-3 text-sm
+                 {% if message.level_tag == 'error' %}border-rose-200 bg-rose-50 text-rose-800
+                 {% elif message.level_tag == 'warning' %}border-amber-200 bg-amber-50 text-amber-800
+                 {% else %}border-emerald-200 bg-emerald-50 text-emerald-800{% endif %}">
+        {% if message.level_tag == 'error' %}{% include "istag/icone.html" with nom="croix" classe="h-5 w-5 shrink-0" %}
+        {% else %}{% include "istag/icone.html" with nom="check" classe="h-5 w-5 shrink-0" %}{% endif %}
+        <span>{{ message }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}

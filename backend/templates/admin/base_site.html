@@ -1,0 +1,20 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title }}{% endblock %}
+
+{# Thème clair uniquement : pas de mode sombre, pas de bouton de thème. #}
+{% block dark-mode-vars %}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'istag/admin.css' %}">
+<link rel="stylesheet" href="{% static 'istag/tailwind-admin.css' %}">
+{% endblock %}
+
+{% block header %}{% include "istag/entete.html" %}{% endblock %}
+
+{% block footer %}
+<div class="istag-footer">ISTAG · Institut Supérieur des Technologies Avancées — Espace scolarité</div>
+{% endblock %}

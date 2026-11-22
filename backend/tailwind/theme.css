@@ -1,0 +1,52 @@
+/* Thème ISTAG partagé par les deux feuilles Tailwind du back office. */
+@source "../templates";
+@source "../admissions/templates";
+@source "../admissions/ui.py";
+@source "../config/admin.py";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-brand: "Cinzel", serif;
+
+  --color-istag: #08783F;
+  --color-istag-fonce: #056331;
+  --color-istag-nuit: #03311A;
+  --color-or: #F5B51B;
+  --color-or-clair: #FFC83D;
+  --color-encre: #1F2933;
+  --color-brume: #F4F7F5;
+
+  --animate-apparition: apparition 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-flotte: flotte 14s ease-in-out infinite;
+  --animate-flotte-lent: flotte 20s ease-in-out infinite reverse;
+  --animate-pousse: pousse 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-largeur: largeur 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes apparition {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes flotte {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.08); }
+  66% { transform: translate(-25px, 20px) scale(0.95); }
+}
+@keyframes pousse {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes largeur {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@utility delai-1 { animation-delay: 80ms; }
+@utility delai-2 { animation-delay: 160ms; }
+@utility delai-3 { animation-delay: 240ms; }
+@utility delai-4 { animation-delay: 320ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

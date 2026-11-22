@@ -1,0 +1,53 @@
+{% load static %}
+{% url 'admin:index' as url_accueil %}
+{% url 'admin:admissions_preinscription_changelist' as url_dossiers %}
+{% url 'admin:auth_user_changelist' as url_comptes %}
+<header class="istag-entete sticky top-0 z-30 bg-istag shadow-lg shadow-istag-nuit/10">
+  <div class="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8">
+    <a href="{{ url_accueil }}" class="flex shrink-0 items-center gap-2.5 text-white no-underline">
+      <img src="{% static 'istag/logo.jpg' %}" alt="" class="h-9 w-9 rounded-full object-cover ring-2 ring-or">
+      <span class="text-lg text-white"><span class="font-brand font-bold tracking-widest">ISTAG</span> <span class="text-white/80">Scolarité</span></span>
+    </a>
+
+    {% if user.is_authenticated and user.is_staff %}
+    <nav class="hidden flex-1 items-center gap-1 md:flex" aria-label="Menu principal">
+      {% with lien="rounded-lg px-3.5 py-2 text-sm font-semibold no-underline transition" %}
+        <a href="{{ url_accueil }}"
+           class="{{ lien }} {% if request.path == url_accueil %}bg-white text-istag{% else %}text-white/85 hover:bg-white/10 hover:text-white{% endif %}">Tableau de bord</a>
+        <a href="{{ url_dossiers }}"
+           class="{{ lien }} {% if '/admissions/' in request.path %}bg-white text-istag{% else %}text-white/85 hover:bg-white/10 hover:text-white{% endif %}">Dossiers</a>
+        {% if perms.auth.view_user %}
+          <a href="{{ url_comptes }}"
+             class="{{ lien }} {% if '/admin/auth/' in request.path %}bg-white text-istag{% else %}text-white/85 hover:bg-white/10 hover:text-white{% endif %}">Comptes du personnel</a>
+        {% endif %}
+      {% endwith %}
+    </nav>
+
+    <div class="ml-auto flex items-center gap-4 text-sm">
+      <a href="{{ site_url }}" target="_blank" rel="noopener" class="hidden items-center gap-1.5 text-white/80 no-underline transition hover:text-white lg:flex">
+        Voir le site {% include "istag/icone.html" with nom="externe" classe="h-4 w-4" %}
+      </a>
+      <div class="hidden h-6 w-px bg-white/20 lg:block"></div>
+      <div class="flex items-center gap-2.5">
+        <span class="flex h-9 w-9 items-center justify-center rounded-full bg-or text-sm font-extrabold uppercase text-istag-nuit">
+          {% if user.first_name %}{{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}{% else %}{{ user.get_username|slice:":2" }}{% endif %}
+        </span>
+        <div class="hidden leading-tight sm:block">
+          <p class="m-0 p-0 font-semibold text-white">{% firstof user.get_short_name user.get_username %}</p>
+          {% if user.has_usable_password %}
+            <a href="{% url 'admin:password_change' %}" class="text-xs text-white/60 no-underline hover:text-or">Changer le mot de passe</a>
+          {% endif %}
+        </div>
+      </div>
+      <form method="post" action="{% url 'admin:logout' %}" class="m-0">
+        {% csrf_token %}
+        <button type="submit" title="Déconnexion"
+                class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-solid border-white/25 bg-transparent px-3 py-2 text-sm font-medium normal-case tracking-normal text-white/90 transition hover:bg-white/10 hover:text-white">
+          {% include "istag/icone.html" with nom="sortie" classe="h-4 w-4" %}
+          <span class="hidden sm:inline">Déconnexion</span>
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</header>

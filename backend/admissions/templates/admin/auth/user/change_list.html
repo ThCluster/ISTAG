@@ -1,0 +1,155 @@
+{% extends "istag/base_tw.html" %}
+
+{% block titre %}Comptes du personnel · ISTAG Scolarité{% endblock %}
+
+{% block page %}
+{% include "istag/entete.html" %}
+
+<main class="mx-auto max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+  {% include "istag/messages.html" %}
+
+  <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between animate-apparition">
+    <div>
+      <p class="text-sm font-semibold uppercase tracking-wider text-istag">Administration</p>
+      <h1 class="mt-1 font-serif text-3xl font-bold">Comptes du personnel</h1>
+      <p class="mt-1 text-slate-500">Les personnes qui peuvent se connecter à l'espace scolarité.</p>
+    </div>
+    <div class="flex flex-col gap-3 sm:flex-row">
+      <form method="get" class="relative w-full sm:w-72" role="search">
+        {% for cle, valeur in parametres_conserves %}<input type="hidden" name="{{ cle }}" value="{{ valeur }}">{% endfor %}
+        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+          {% include "istag/icone.html" with nom="loupe" classe="h-5 w-5" %}
+        </span>
+        <input type="search" name="q" value="{{ recherche }}" placeholder="Rechercher un compte…"
+               class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-[15px] shadow-sm outline-none transition placeholder:text-slate-400 focus:border-istag focus:ring-4 focus:ring-istag/15">
+      </form>
+      {% if has_add_permission %}
+        <a href="{% url 'admin:auth_user_add' %}"
+           class="inline-flex items-center justify-center gap-2 rounded-xl bg-istag px-5 py-3 font-bold text-white shadow-lg shadow-istag/25 transition hover:bg-istag-fonce">
+          {% include "istag/icone.html" with nom="utilisateur" classe="h-5 w-5" %}
+          Ajouter un compte
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="mt-8 grid gap-6 lg:grid-cols-[1fr_240px]">
+    <form method="post" id="changelist-form" class="min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      {% csrf_token %}
+      <input type="hidden" name="index" value="0">
+      <input type="hidden" name="select_across" value="0">
+
+      {% if actions_choix and cl.result_list %}
+        <div class="flex flex-wrap items-center gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3 text-sm">
+          <select name="action" class="rounded-lg border border-slate-200 bg-white px-3 py-2 outline-none focus:border-istag">
+            <option value="">Action sur la sélection…</option>
+            {% for valeur, libelle in actions_choix %}<option value="{{ valeur }}">{{ libelle }}</option>{% endfor %}
+          </select>
+          <button type="submit" class="rounded-lg bg-encre px-4 py-2 font-semibold text-white transition hover:bg-black">Appliquer</button>
+        </div>
+      {% endif %}
+
+      {% if cl.result_list %}
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-xs uppercase tracking-wider text-slate-400">
+              <tr class="border-b border-slate-100">
+                <th class="w-10 px-5 py-3"><input type="checkbox" id="tout-cocher" class="h-4 w-4 accent-istag" aria-label="Tout sélectionner"></th>
+                <th class="py-3 pr-4 font-semibold">Personne</th>
+                <th class="py-3 pr-4 font-semibold">Rôle</th>
+                <th class="py-3 pr-4 font-semibold">État</th>
+                <th class="py-3 pr-4 font-semibold">Dernière connexion</th>
+                <th class="py-3 pr-5"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for u in cl.result_list %}
+                {% url 'admin:auth_user_change' u.pk as url_compte %}
+                <tr class="group transition hover:bg-brume/80">
+                  <td class="px-5 py-3.5"><input type="checkbox" name="_selected_action" value="{{ u.pk }}" class="ligne h-4 w-4 accent-istag" aria-label="Sélectionner {{ u.get_username }}"></td>
+                  <td class="py-3.5 pr-4">
+                    <a href="{{ url_compte }}" class="flex items-center gap-3">
+                      <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-or/20 text-sm font-extrabold text-istag-fonce">{{ u.initiales }}</span>
+                      <span class="min-w-0">
+                        <span class="block truncate font-semibold text-encre group-hover:text-istag">{% firstof u.get_full_name u.get_username %}</span>
+                        <span class="block truncate text-xs text-slate-400">{{ u.get_username }}{% if u.email %} · {{ u.email }}{% endif %}</span>
+                      </span>
+                    </a>
+                  </td>
+                  <td class="py-3.5 pr-4">
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset {{ u.role_classes }}">{{ u.role }}</span>
+                  </td>
+                  <td class="py-3.5 pr-4">
+                    {% if u.is_active %}
+                      <span class="inline-flex items-center gap-1.5 text-emerald-700"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Actif</span>
+                    {% else %}
+                      <span class="inline-flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full bg-slate-300"></span>Désactivé</span>
+                    {% endif %}
+                  </td>
+                  <td class="whitespace-nowrap py-3.5 pr-4 text-slate-500">
+                    {% if u.last_login %}il y a {{ u.last_login|timesince }}{% else %}Jamais{% endif %}
+                  </td>
+                  <td class="py-3.5 pr-5 text-right">
+                    <a href="{{ url_compte }}" class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 transition hover:border-istag hover:text-istag">
+                      Modifier
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if pagination %}
+          <div class="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-sm">
+            {% if pagination.precedente %}<a href="{{ pagination.precedente }}" class="font-semibold text-istag hover:underline">Précédent</a>{% else %}<span></span>{% endif %}
+            <div class="flex gap-1">
+              {% for p in pagination.pages %}
+                {% if p.ellipse %}<span class="px-2 text-slate-400">…</span>
+                {% else %}<a href="{{ p.url }}" class="flex h-8 min-w-8 items-center justify-center rounded-lg px-2 font-semibold {% if p.actif %}bg-istag text-white{% else %}text-slate-600 hover:bg-slate-100{% endif %}">{{ p.num }}</a>{% endif %}
+              {% endfor %}
+            </div>
+            {% if pagination.suivante %}<a href="{{ pagination.suivante }}" class="font-semibold text-istag hover:underline">Suivant</a>{% else %}<span></span>{% endif %}
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="px-6 py-16 text-center">
+          <p class="font-semibold">Aucun compte trouvé</p>
+          <a href="{{ request.path }}" class="mt-3 inline-block text-sm font-semibold text-istag hover:underline">Effacer la recherche</a>
+        </div>
+      {% endif %}
+    </form>
+
+    <aside class="space-y-4">
+      {% for f in filtres %}
+        <div class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <p class="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">{{ f.titre|capfirst }}</p>
+          <ul class="space-y-0.5">
+            {% for c in f.choix %}
+              <li><a href="{{ c.query_string|iriencode }}"
+                     class="block rounded-lg px-2.5 py-1.5 text-sm transition {% if c.selected %}bg-istag/10 font-semibold text-istag{% else %}text-slate-600 hover:bg-slate-50 hover:text-encre{% endif %}">{{ c.display }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+
+      <div class="rounded-2xl bg-gradient-to-br from-istag to-istag-nuit p-5 text-sm text-white shadow-lg shadow-istag/20">
+        <p class="font-bold">Ajouter un agent de la scolarité</p>
+        <ol class="mt-2 list-decimal space-y-1 pl-4 text-white/80">
+          <li>« Ajouter un compte » : identifiant + mot de passe.</li>
+          <li>Cochez <strong class="text-or">Statut équipe</strong>.</li>
+          <li>Donnez-lui les droits sur les pré-inscriptions et les pièces justificatives.</li>
+        </ol>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script>
+  (function () {
+    var tout = document.getElementById('tout-cocher');
+    var lignes = Array.prototype.slice.call(document.querySelectorAll('input.ligne'));
+    if (tout) tout.addEventListener('change', function () { lignes.forEach(function (c) { c.checked = tout.checked; }); });
+  })();
+</script>
+{% endblock %}

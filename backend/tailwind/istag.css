@@ -1,0 +1,10 @@
+/*
+  Tailwind COMPLET (avec remise à zéro des styles) pour les pages 100 % Tailwind :
+  connexion, tableau de bord, liste des dossiers, comptes du personnel.
+
+  Compilation (à relancer après chaque modification des templates) :
+      cd frontend
+      npm run build:admin-css
+*/
+@import "tailwindcss" source(none);
+@import "./theme.css";

@@ -1,0 +1,230 @@
+{% extends "admin/change_form.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Tableau de bord</a> ›
+  <a href="{% url 'admin:admissions_preinscription_changelist' %}">Dossiers</a> ›
+  {{ dossier.nom_complet }}
+</div>
+{% endblock %}
+
+{% block content_title %}{% endblock %}
+{% block content_subtitle %}{% endblock %}
+{% block object-tools %}{% endblock %}
+
+{% block content %}
+{% if dossier %}
+
+{# ================= 1. En-tête : qui, quoi, contact, décision ================= #}
+<section class="carte">
+  <div class="fiche-entete">
+    {% with photo=dossier.photo %}
+      {% if photo and photo.est_image %}
+        <a href="{% url 'piece-fichier' photo.pk %}" target="_blank" rel="noopener" title="Agrandir la photo">
+          <img class="fiche-photo" src="{% url 'piece-fichier' photo.pk %}" alt="Photo du candidat">
+        </a>
+      {% else %}
+        <span class="fiche-photo avatar-vide">{{ dossier.initiales }}</span>
+      {% endif %}
+    {% endwith %}
+
+    <div class="fiche-identite">
+      <h1>{{ dossier.nom_complet }}</h1>
+      <span class="fiche-numero">{{ dossier.numero_dossier }}</span>
+      &nbsp;<span class="badge badge-{{ dossier.statut }}">{{ dossier.get_statut_display }}</span>
+
+      <p class="fiche-formation">
+        <strong>{{ dossier.filiere_nom }}</strong> · {{ dossier.niveau }} · {{ dossier.regime }}<br>
+        {{ dossier.campus_nom }}
+      </p>
+
+      <div class="fiche-contacts">
+        <a class="bouton bouton-gris bouton-petit" href="tel:{{ tel }}">Appeler {{ dossier.telephone }}</a>
+        <a class="bouton bouton-gris bouton-petit" href="{{ whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
+        {% if dossier.email %}
+          <a class="bouton bouton-gris bouton-petit" href="mailto:{{ dossier.email }}">{{ dossier.email }}</a>
+        {% endif %}
+      </div>
+
+      <p class="fiche-meta">
+        Reçu le {{ dossier.date_creation|date:"d/m/Y à H:i" }}
+        {% if dossier.traite_par %} · Dernière action par <strong>{% firstof dossier.traite_par.get_full_name dossier.traite_par.get_username %}</strong> le {{ dossier.date_mise_a_jour|date:"d/m/Y à H:i" }}{% endif %}
+      </p>
+    </div>
+  </div>
+
+  {% if modifiable %}
+  <div class="decision">
+    {% if dossier.statut == "inscrit" %}
+      <p class="decision-fini">Inscription validée — dossier terminé.</p>
+
+    {% elif dossier.statut == "admis" %}
+      <div class="decision-titre">Le dossier est approuvé.</div>
+      <p class="decision-aide">Quand le candidat vient au guichet avec ses originaux et règle les frais, validez son inscription.</p>
+      <div class="decision-boutons">
+        <form method="post" action="{{ url_valider }}">{% csrf_token %}
+          <button type="submit" class="bouton bouton-bleu"
+                  onclick="return confirm('Valider définitivement cette inscription ?');">Valider l'inscription</button>
+        </form>
+        <form method="post" action="{{ url_rouvrir }}">{% csrf_token %}
+          <button type="submit" class="bouton bouton-gris"
+                  onclick="return confirm('Annuler l\'approbation et remettre le dossier en examen ?');">Annuler l'approbation</button>
+        </form>
+      </div>
+
+    {% elif dossier.statut == "rejetee" %}
+      <div class="decision-titre">Le dossier a été rejeté.</div>
+      <p class="decision-aide">Motif envoyé au candidat : « {{ dossier.message_candidat }} »</p>
+      <form method="post" action="{{ url_rouvrir }}">{% csrf_token %}
+        <button type="submit" class="bouton bouton-gris"
+                onclick="return confirm('Annuler le rejet et remettre le dossier en examen ?');">Annuler le rejet</button>
+      </form>
+
+    {% else %}
+      <div class="decision-titre">Votre décision</div>
+      <p class="decision-aide">Vérifiez d'abord les pièces ci-dessous. Quand tout est bon, approuvez le dossier.</p>
+      <div class="decision-boutons">
+        <form method="post" action="{{ url_approuver }}">{% csrf_token %}
+          <button type="submit" class="bouton bouton-vert" {% if raison_pas_approuver %}disabled{% endif %}
+                  onclick="return confirm('Approuver ce dossier ?\nLes pièces encore « à vérifier » seront marquées conformes.');">Approuver le dossier</button>
+        </form>
+        <details class="depliant">
+          <summary class="bouton bouton-rouge">Rejeter…</summary>
+          <form method="post" action="{{ url_rejeter }}" class="mini-form">{% csrf_token %}
+            <label for="motif-rejet">Motif du rejet (le candidat le verra) :</label>
+            <textarea id="motif-rejet" name="motif" rows="3" required
+                      placeholder="Ex : Le niveau requis pour cette filière est le BTS."></textarea>
+            <button type="submit" class="bouton bouton-rouge-plein bouton-petit">Confirmer le rejet</button>
+          </form>
+        </details>
+      </div>
+      {% if raison_pas_approuver %}<p class="decision-raison">{{ raison_pas_approuver }}</p>{% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
+{# ================= 2. Pièces justificatives ================= #}
+<section class="carte" id="pieces">
+  <h2>Pièces justificatives</h2>
+  <p class="aide">Cliquez sur un document pour l'ouvrir en grand. Si une pièce n'est pas bonne, refusez-la avec le motif : le candidat le verra en ligne et pourra la renvoyer.</p>
+
+  <div class="pieces-grille">
+    {% for p in pieces %}
+      <div class="piece {% if p.piece %}statut-{{ p.piece.statut }}{% endif %}">
+        <div class="piece-titre">
+          <strong>{{ p.libelle }}</strong>
+          {% if p.piece %}
+            {% if p.piece.statut == "conforme" %}<span class="badge badge-admis">Conforme</span>
+            {% elif p.piece.statut == "non_conforme" %}<span class="badge badge-rejetee">Refusée</span>
+            {% else %}<span class="badge badge-en_examen">À vérifier</span>{% endif %}
+          {% endif %}
+        </div>
+
+        {% if p.piece %}
+          <a class="piece-apercu" href="{{ p.url }}" target="_blank" rel="noopener" title="Ouvrir en grand">
+            {% if p.piece.est_image %}
+              <img src="{{ p.url }}" alt="{{ p.libelle }}">
+            {% else %}
+              <span class="pdf">Ouvrir le PDF</span>
+            {% endif %}
+          </a>
+          {% if p.piece.statut == "non_conforme" and p.piece.commentaire %}
+            <div class="piece-motif" style="padding-top:10px">Motif : {{ p.piece.commentaire }}</div>
+          {% endif %}
+
+          {% if modifiable and dossier.statut != "inscrit" and dossier.statut != "rejetee" %}
+          <div class="piece-actions">
+            {% if p.piece.statut != "conforme" %}
+              <form method="post" action="{{ p.url_verifier }}">{% csrf_token %}
+                <input type="hidden" name="decision" value="conforme">
+                <button type="submit" class="bouton bouton-vert bouton-petit">Conforme</button>
+              </form>
+            {% endif %}
+            {% if p.piece.statut != "non_conforme" %}
+              <details class="depliant">
+                <summary class="bouton bouton-rouge bouton-petit">Refuser…</summary>
+                <form method="post" action="{{ p.url_verifier }}" class="mini-form">{% csrf_token %}
+                  <input type="hidden" name="decision" value="non_conforme">
+                  <label>Motif (visible par le candidat) :</label>
+                  <input type="text" name="motif" maxlength="255" required placeholder="Ex : Photo floue, document illisible…">
+                  <button type="submit" class="bouton bouton-rouge-plein bouton-petit">Refuser la pièce</button>
+                </form>
+              </details>
+            {% endif %}
+          </div>
+          {% endif %}
+        {% else %}
+          <div class="piece-apercu manquante">
+            {% if p.facultative %}Non fournie (diplôme en cours d'obtention){% else %}Pas encore envoyée{% endif %}
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+{# ================= 3. Informations du candidat ================= #}
+<section class="carte">
+  <h2>Informations du candidat</h2>
+  <div class="infos-grille">
+    <div>
+      <h3>Identité</h3>
+      <dl>
+        <dt>Nom et prénoms</dt><dd>{{ dossier.nom_complet }}</dd>
+        <dt>Date de naissance</dt><dd>{{ dossier.date_naissance|date:"d/m/Y"|default:"—" }}</dd>
+        <dt>Genre</dt><dd>{{ dossier.genre }}</dd>
+        <dt>Nationalité</dt><dd>{{ dossier.nationalite }}</dd>
+      </dl>
+    </div>
+    <div>
+      <h3>Coordonnées</h3>
+      <dl>
+        <dt>Téléphone</dt><dd>{{ dossier.telephone }}</dd>
+        <dt>WhatsApp</dt><dd>{{ dossier.whatsapp|default:"Même numéro" }}</dd>
+        <dt>Email</dt><dd>{{ dossier.email|default:"—" }}</dd>
+        <dt>Ville de résidence</dt><dd>{{ dossier.ville_residence|default:"—" }}</dd>
+      </dl>
+    </div>
+    <div>
+      <h3>Parcours scolaire</h3>
+      <dl>
+        <dt>Dernier diplôme</dt><dd>{{ dossier.dernier_diplome }}{% if dossier.serie %} — {{ dossier.serie }}{% endif %}</dd>
+        <dt>Année · Mention</dt><dd>{{ dossier.annee_obtention }} · {{ dossier.mention|default:"—" }}</dd>
+        <dt>Établissement d'origine</dt><dd>{{ dossier.etablissement_origine }}</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+{# ================= 4. Messages ================= #}
+<section class="carte">
+  <h2>Messages</h2>
+  <form method="post" novalidate>{% csrf_token %}
+    {% if adminform.form.non_field_errors %}<div class="errornote">{{ adminform.form.non_field_errors }}</div>{% endif %}
+    <div class="messages-grille">
+      <div>
+        <label for="id_message_candidat">Message au candidat</label>
+        <p class="aide">Le candidat le voit quand il consulte son dossier en ligne.</p>
+        {% if modifiable %}{{ adminform.form.message_candidat.errors }}{{ adminform.form.message_candidat }}
+        {% else %}<p>{{ dossier.message_candidat|linebreaksbr|default:"—" }}</p>{% endif %}
+      </div>
+      <div>
+        <label for="id_notes_internes">Notes internes</label>
+        <p class="aide">Visibles uniquement par la scolarité.</p>
+        {% if modifiable %}{{ adminform.form.notes_internes.errors }}{{ adminform.form.notes_internes }}
+        {% else %}<p>{{ dossier.notes_internes|linebreaksbr|default:"—" }}</p>{% endif %}
+      </div>
+    </div>
+    {% if modifiable %}
+      <div class="enregistrer">
+        <button type="submit" name="_save" class="bouton bouton-vert">Enregistrer les messages</button>
+      </div>
+    {% endif %}
+  </form>
+</section>
+
+{% else %}
+  {{ block.super }}
+{% endif %}
+{% endblock %}

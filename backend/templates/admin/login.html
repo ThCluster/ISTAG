@@ -1,0 +1,146 @@
+{% extends "istag/base_tw.html" %}
+{% load static %}
+
+{% block titre %}Connexion · ISTAG Scolarité{% endblock %}
+{% block body_classes %}min-h-screen bg-white font-sans text-encre antialiased{% endblock %}
+
+{% block page %}
+<div class="min-h-screen lg:grid lg:grid-cols-[1.1fr_1fr]">
+
+  {# ================= Panneau visuel ================= #}
+  <aside class="relative overflow-hidden bg-istag-nuit text-white min-h-[260px] lg:min-h-screen">
+    <img src="{% static 'istag/campus.jpg' %}" alt="" class="absolute inset-0 h-full w-full object-cover opacity-45 scale-105">
+    <div class="absolute inset-0 bg-gradient-to-br from-istag/85 via-istag-fonce/80 to-istag-nuit/95"></div>
+
+    {# Halos lumineux animés #}
+    <div class="pointer-events-none absolute -top-24 -left-20 h-80 w-80 rounded-full bg-or/30 blur-3xl animate-flotte"></div>
+    <div class="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-emerald-300/20 blur-3xl animate-flotte-lent"></div>
+
+    <div class="relative z-10 flex h-full flex-col justify-between p-8 sm:p-12 lg:p-16">
+      <div class="flex items-center gap-3 animate-apparition">
+        <img src="{% static 'istag/logo.jpg' %}" alt="Logo ISTAG" class="h-12 w-12 rounded-full object-cover ring-2 ring-or shadow-lg">
+        <div>
+          <p class="font-brand text-xl font-bold tracking-[0.2em]">ISTAG</p>
+          <p class="text-xs uppercase tracking-[0.25em] text-white/70">Gagnoa · Côte d'Ivoire</p>
+        </div>
+      </div>
+
+      <div class="hidden lg:block max-w-lg animate-apparition delai-2">
+        <span class="inline-flex items-center gap-2 rounded-full border border-or/40 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-or backdrop-blur">
+          <span class="h-1.5 w-1.5 rounded-full bg-or animate-pulse"></span>
+          Campagne 2026 – 2027
+        </span>
+        <h1 class="mt-6 font-serif text-5xl font-bold leading-[1.1]">
+          L'espace de la <span class="text-or">scolarité</span>.
+        </h1>
+        <p class="mt-5 text-lg leading-relaxed text-white/80">
+          Vérifiez les pièces, échangez avec les candidats et validez les inscriptions,
+          au même endroit.
+        </p>
+
+        <dl class="mt-10 grid grid-cols-3 gap-4">
+          <div class="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+            <dt class="text-xs text-white/60">Étape 1</dt>
+            <dd class="mt-1 font-semibold">Vérifier</dd>
+          </div>
+          <div class="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+            <dt class="text-xs text-white/60">Étape 2</dt>
+            <dd class="mt-1 font-semibold">Approuver</dd>
+          </div>
+          <div class="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+            <dt class="text-xs text-white/60">Étape 3</dt>
+            <dd class="mt-1 font-semibold">Inscrire</dd>
+          </div>
+        </dl>
+      </div>
+
+      <p class="hidden lg:block text-sm text-white/50 animate-apparition delai-4">
+        Institut Supérieur des Technologies Avancées
+      </p>
+    </div>
+  </aside>
+
+  {# ================= Formulaire ================= #}
+  <main class="flex items-center justify-center px-6 py-12 sm:px-12">
+    <div class="w-full max-w-sm animate-apparition delai-1">
+      <div class="mb-10">
+        <p class="text-sm font-semibold uppercase tracking-wider text-istag">Espace scolarité</p>
+        <h2 class="mt-2 font-serif text-4xl font-bold text-encre">Bon retour parmi nous</h2>
+        <p class="mt-3 text-slate-500">Connectez-vous pour gérer les pré-inscriptions.</p>
+      </div>
+
+      {% if form.errors or form.non_field_errors %}
+        <div class="mb-6 flex gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700" role="alert">
+          {% include "istag/icone.html" with nom="croix" classe="h-5 w-5 shrink-0" %}
+          <p>Nom d'utilisateur ou mot de passe incorrect. Vérifiez les majuscules et réessayez.</p>
+        </div>
+      {% endif %}
+
+      {% if user.is_authenticated %}
+        <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Vous êtes connecté en tant que <strong>{{ user.get_username }}</strong>, mais ce compte n'a pas accès
+          à l'espace scolarité. Connectez-vous avec un autre compte.
+        </div>
+      {% endif %}
+
+      <form action="{{ app_path }}" method="post" id="login-form" class="space-y-5">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div>
+          <label for="id_username" class="mb-1.5 block text-sm font-semibold text-slate-700">Nom d'utilisateur</label>
+          <div class="group relative">
+            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 group-focus-within:text-istag">
+              {% include "istag/icone.html" with nom="utilisateur" classe="h-5 w-5" %}
+            </span>
+            <input id="id_username" name="username" type="text" autocomplete="username" autocapitalize="none" required autofocus
+                   value="{{ form.username.value|default:'' }}" placeholder="ex : admin.istag"
+                   class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-[15px] outline-none transition placeholder:text-slate-400 focus:border-istag focus:bg-white focus:ring-4 focus:ring-istag/15">
+          </div>
+        </div>
+
+        <div>
+          <label for="id_password" class="mb-1.5 block text-sm font-semibold text-slate-700">Mot de passe</label>
+          <div class="group relative">
+            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 group-focus-within:text-istag">
+              {% include "istag/icone.html" with nom="cadenas" classe="h-5 w-5" %}
+            </span>
+            <input id="id_password" name="password" type="password" autocomplete="current-password" required
+                   placeholder="Votre mot de passe"
+                   class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-12 text-[15px] outline-none transition placeholder:text-slate-400 focus:border-istag focus:bg-white focus:ring-4 focus:ring-istag/15">
+            <button type="button" id="voir-mdp" aria-label="Afficher le mot de passe"
+                    class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 transition hover:text-istag">
+              {% include "istag/icone.html" with nom="oeil" classe="h-5 w-5" %}
+            </button>
+          </div>
+        </div>
+
+        <button type="submit"
+                class="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-istag py-3.5 font-bold text-white shadow-lg shadow-istag/25 transition hover:bg-istag-fonce hover:shadow-xl hover:shadow-istag/30 active:scale-[0.99]">
+          <span class="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span>
+          <span class="relative">Se connecter</span>
+          <span class="relative transition-transform group-hover:translate-x-1">
+            {% include "istag/icone.html" with nom="fleche" classe="h-5 w-5" %}
+          </span>
+        </button>
+      </form>
+
+      <div class="mt-10 flex items-center gap-3 rounded-xl bg-brume p-4 text-sm text-slate-500">
+        <span class="text-istag">{% include "istag/icone.html" with nom="bouclier" classe="h-5 w-5" %}</span>
+        <p>Accès réservé au personnel de l'ISTAG. Mot de passe oublié ? Contactez l'administrateur.</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // Afficher / masquer le mot de passe
+  document.getElementById('voir-mdp').addEventListener('click', function () {
+    var champ = document.getElementById('id_password');
+    var visible = champ.type === 'text';
+    champ.type = visible ? 'password' : 'text';
+    this.setAttribute('aria-label', visible ? 'Afficher le mot de passe' : 'Masquer le mot de passe');
+    this.classList.toggle('text-istag', !visible);
+  });
+</script>
+{% endblock %}
