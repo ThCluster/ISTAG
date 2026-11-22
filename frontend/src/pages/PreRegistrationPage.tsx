@@ -1180,7 +1180,7 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
 
             <div className="flex items-center gap-3 shrink-0">
               <a
-                href={`https://wa.me/2250707421819`}
+                href={INSTITUTION.contact.whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 bg-[#08783F] hover:bg-[#056331] text-white rounded-sm font-bold transition-colors flex items-center gap-1.5"

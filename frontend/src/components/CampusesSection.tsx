@@ -1,5 +1,5 @@
 import React from 'react';
-import { CAMPUSES, CampusInfo } from '../data/institutionData';
+import { CAMPUSES, CampusInfo, INSTITUTION } from '../data/institutionData';
 import { MapPin, Phone, Mail, Navigation, Check, Trees, MessageCircle, Pickaxe, Sprout, Laptop, GraduationCap } from 'lucide-react';
 
 export const CampusesSection: React.FC = () => {
@@ -106,7 +106,7 @@ export const CampusesSection: React.FC = () => {
               </a>
 
               <a
-                href="https://wa.me/2250707486050?text=Bonjour%20ISTAG%20Gagnoa,%20je%20souhaite%20des%20informations%20sur%20les%20inscriptions"
+                href={`${INSTITUTION.contact.whatsappUrl}?text=Bonjour%20ISTAG%20Gagnoa,%20je%20souhaite%20des%20informations%20sur%20les%20inscriptions`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-emerald-800 hover:text-emerald-900 font-semibold bg-emerald-50 px-3.5 py-2 rounded-sm border border-emerald-300 transition-colors"

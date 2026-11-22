@@ -20,6 +20,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { Logo } from './Logo';
+import { INSTITUTION } from '../data/institutionData';
 
 interface FlyerShowcaseModalProps {
   isOpen: boolean;
@@ -428,7 +429,7 @@ export const FlyerShowcaseModal: React.FC<FlyerShowcaseModalProps> = ({
                     Appeler (07 07 48 60 50)
                   </a>
                   <a
-                    href="https://wa.me/2250707486050"
+                    href={INSTITUTION.contact.whatsappUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-[#25D366] text-white rounded text-xs font-bold flex items-center gap-1.5"

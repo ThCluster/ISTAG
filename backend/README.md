@@ -59,3 +59,37 @@ Statuts : Reçue → En cours d'examen → (À compléter) → Admis(e) → Insc
 ```bash
 python manage.py test admissions
 ```
+
+## Déploiement sur Render
+
+Deux services, un par dossier du dépôt.
+
+### 1. Backend (Web Service)
+
+| Réglage | Valeur |
+|---|---|
+| Root Directory | `backend` |
+| Runtime | Python |
+| Build Command | `./build.sh` |
+| Start Command | `./start.sh` |
+| Disque persistant | monté sur `/var/data` (indispensable : base SQLite + documents) |
+
+Variables d'environnement :
+
+| Variable | Exemple |
+|---|---|
+| `DJANGO_SECRET_KEY` | une longue chaîne aléatoire |
+| `DJANGO_DEBUG` | `False` |
+| `DATA_DIR` | `/var/data` |
+| `FRONTEND_URL` | `https://istag.onrender.com` |
+| `CORS_ALLOWED_ORIGINS` | `https://istag.onrender.com` |
+| `DJANGO_SUPERUSER_USERNAME` / `DJANGO_SUPERUSER_PASSWORD` | compte admin créé au 1er démarrage |
+
+### 2. Frontend (Static Site)
+
+| Réglage | Valeur |
+|---|---|
+| Root Directory | `frontend` |
+| Build Command | `npm install && npm run build` |
+| Publish Directory | `dist` |
+| Variable `VITE_API_URL` | adresse du backend, ex. `https://istag-api.onrender.com` |

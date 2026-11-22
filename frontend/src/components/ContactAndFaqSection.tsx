@@ -242,13 +242,13 @@ export const ContactAndFaqSection: React.FC = () => {
                     Email : istag225@gmail.com
                   </a>
                   <a
-                    href="https://wa.me/2250707486050?text=Bonjour%20ISTAG%20Gagnoa"
+                    href={`${INSTITUTION.contact.whatsappUrl}?text=Bonjour%20ISTAG%20Gagnoa`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:underline text-[#056331] font-bold flex items-center gap-1.5 pt-1 border-t border-emerald-200/60"
                   >
                     <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
-                    WhatsApp direct Gagnoa : +225 07 07 48 60 50
+                    WhatsApp direct Gagnoa : {INSTITUTION.contact.whatsapp}
                   </a>
                   <div className="flex items-start gap-1.5 text-stone-600 text-[11px] pt-1">
                     <MapPin className="w-3.5 h-3.5 text-[#08783F] shrink-0 mt-0.5" />

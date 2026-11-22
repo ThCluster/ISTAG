@@ -2,7 +2,8 @@
 Paramètres Django du backend ISTAG (pré-inscriptions).
 
 Les valeurs sensibles se règlent par variables d'environnement :
-  DJANGO_SECRET_KEY, DJANGO_DEBUG, DJANGO_ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS
+  DJANGO_SECRET_KEY, DJANGO_DEBUG, DJANGO_ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS,
+  FRONTEND_URL, DATA_DIR (dossier qui contient la base SQLite et les documents envoyés)
 """
 
 import os
@@ -22,6 +23,25 @@ SECRET_KEY = os.environ.get(
 )
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', '')
+
+# Render fournit automatiquement l'adresse publique du service.
+RENDER_HOST = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_HOST:
+    ALLOWED_HOSTS.append(RENDER_HOST)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_HOST}')
+
+# Derrière le proxy HTTPS de Render (nécessaire pour la connexion à l'admin).
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 3600
+
+# Dossier des données persistantes : base SQLite + pièces justificatives.
+# En production, il doit pointer vers un disque qui survit aux redéploiements.
+DATA_DIR = Path(os.environ.get('DATA_DIR', BASE_DIR))
 
 # Adresse du site public (lien « Voir le site » du dashboard)
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
@@ -48,6 +68,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # sert le CSS / les images de l'admin
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -81,7 +102,7 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DATA_DIR / 'db.sqlite3',
     }
 }
 
@@ -104,11 +125,15 @@ USE_TZ = True
 # --- Fichiers statiques & documents envoyés -------------------------------
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage'},
+}
 
 # Les pièces justificatives sont stockées ici. Ce dossier n'est JAMAIS servi
 # publiquement : les fichiers ne sont accessibles que par le personnel connecté
 # à l'admin (voir admissions.views.piece_fichier).
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_ROOT = DATA_DIR / 'media'
 
 # Taille maximale d'une pièce justificative (en octets)
 ADMISSIONS_TAILLE_MAX_PIECE = 5 * 1024 * 1024  # 5 Mo

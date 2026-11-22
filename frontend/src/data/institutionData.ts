@@ -30,7 +30,8 @@ export const INSTITUTION = {
     generalPhone: "+225 07 07 48 60 50",
     phone2: "+225 01 42 89 18 84",
     phone3: "+225 05 64 21 43 73",
-    whatsapp: "+225 07 07 48 60 50",
+    whatsapp: "+225 07 48 94 59 98",
+    whatsappUrl: "https://wa.me/2250748945998",
     admissionsPhone: "+225 07 07 48 60 50",
     generalEmail: "istag225@gmail.com",
     admissionsEmail: "istag225@gmail.com",
@@ -129,6 +130,6 @@ export const FAQ_ITEMS = [
   },
   {
     question: "Comment contacter l'ISTAG à Gagnoa ?",
-    answer: "Vous pouvez joindre l'ISTAG par téléphone aux numéros (225) 07 07 48 60 50, 01 42 89 18 84 ou 05 64 21 43 73, par WhatsApp au 07 07 48 60 50, ou par email à istag225@gmail.com."
+    answer: "Vous pouvez joindre l'ISTAG par téléphone aux numéros (225) 07 07 48 60 50, 01 42 89 18 84 ou 05 64 21 43 73, par WhatsApp au 07 48 94 59 98, ou par email à istag225@gmail.com."
   }
 ];
