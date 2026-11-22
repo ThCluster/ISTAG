@@ -1,0 +1,9 @@
+/*
+  Tailwind SANS remise à zéro, en !important, pour les pages qui gardent la mise en
+  page de l'admin Django (fiche dossier, formulaires des comptes…) : sert surtout
+  à la barre de navigation commune. Compilé avec « npm run build:admin-css ».
+*/
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) important source(none);
+@import "./theme.css";
