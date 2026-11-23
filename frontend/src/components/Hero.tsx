@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight, BookOpen, ShieldCheck, MapPin } from 'lucide-react';
 import { Logo } from './Logo';
+import heroCover from '../assets/images/istag_hero_cover.png';
 
 interface HeroProps {
   onOpenPreRegistration: () => void;
@@ -13,7 +14,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenPreRegistration, onExploreProg
       {/* Background Photography with Measured Contrast Scrim - Utilise l'image de couverture PNG des étudiants ISTAG */}
       <div className="absolute inset-0 z-0">
         <img
-          src="/src/assets/images/istag_hero_cover.png"
+          src={heroCover}
           alt="Étudiants de l'ISTAG Gagnoa - Promotion officielle"
           className="w-full h-full object-cover object-top scale-102 transform motion-safe:transition-transform motion-safe:duration-10000"
           referrerPolicy="no-referrer"

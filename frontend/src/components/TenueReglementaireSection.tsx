@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Shirt, ShieldCheck, Sparkles, Users, Award, Upload, RotateCcw } from 'lucide-react';
+import photoTenue from '../assets/images/istag_tenue_reglementaire.png';
 
 export const TenueReglementaireSection: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -8,7 +9,7 @@ export const TenueReglementaireSection: React.FC = () => {
       const saved = localStorage.getItem('istag_tenue_originale_photo');
       if (saved) return saved;
     }
-    return '/image.png';
+    return photoTenue;
   });
 
   const [hasCustomPhoto, setHasCustomPhoto] = useState<boolean>(() => {
@@ -34,7 +35,7 @@ export const TenueReglementaireSection: React.FC = () => {
 
   const handleReset = () => {
     localStorage.removeItem('istag_tenue_originale_photo');
-    setPhotoSrc('/image.png');
+    setPhotoSrc(photoTenue);
     setHasCustomPhoto(false);
   };
 
@@ -94,7 +95,7 @@ export const TenueReglementaireSection: React.FC = () => {
               onError={(e) => {
                 // Fallback gracefully if direct /image.png hasn't been uploaded yet
                 if (!hasCustomPhoto) {
-                  e.currentTarget.src = '/src/assets/images/istag_tenue_reglementaire.png';
+                  e.currentTarget.src = photoTenue;
                 }
               }}
             />

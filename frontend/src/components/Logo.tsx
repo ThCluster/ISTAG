@@ -1,4 +1,5 @@
 import React from 'react';
+import logoIstag from '../assets/images/istag_official_logo_1790553139049.jpg';
 
 interface LogoProps {
   className?: string;
@@ -30,7 +31,7 @@ export const Logo: React.FC<LogoProps> = ({
       <div className={`relative ${dim} rounded-full overflow-hidden shrink-0 shadow-sm border border-[#08783F]/30 bg-white flex items-center justify-center`}>
         {/* Render the high-definition official logo */}
         <img
-          src="/src/assets/images/istag_official_logo_1790553139049.jpg"
+          src={logoIstag}
           alt="Logo Officiel - Institut Supérieur des Technologies Avancées (ISTAG)"
           className="w-full h-full object-cover scale-102"
           referrerPolicy="no-referrer"

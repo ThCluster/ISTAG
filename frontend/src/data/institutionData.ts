@@ -1,3 +1,5 @@
+import campusGagnoa from '../assets/images/istag_campus_gagnoa_1790603788172.jpg';
+
 export interface CampusInfo {
   id: string;
   name: string;
@@ -56,7 +58,7 @@ export const CAMPUSES: CampusInfo[] = [
     address: "Quartier Garahio, Enceinte de l'Ex-Collège Les Alliances, Gagnoa, Côte d'Ivoire",
     phone: "(225) 07 07 48 60 50 / 01 42 89 18 84 / 05 64 21 43 73",
     email: "istag225@gmail.com",
-    image: "/src/assets/images/istag_campus_gagnoa_1790603788172.jpg",
+    image: campusGagnoa,
     description: "Implanté à Gagnoa dans le dynamique quartier Garahio sur le site étendu et spacieux de l'Ex-Collège Les Alliances, l'ISTAG déploie des infrastructures adaptées à l'Enseignement Technique & Professionnel, aux filières BTS d'État (Mines, Agriculture Tropicale, Informatique, Bâtiment, Hôtellerie, Gestion) et aux cycles Licences et Masters.",
     keyAssets: [
       "Cadre académique réputé et spacieux à l'Ex-Collège Les Alliances",
