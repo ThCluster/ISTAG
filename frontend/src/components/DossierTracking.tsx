@@ -7,6 +7,7 @@ import {
   EXTENSIONS_ACCEPTEES,
   PIECES,
   PieceType,
+  preparerFichier,
   renvoyerPiece,
   verifierFichier,
 } from '../api/admissions';
@@ -58,11 +59,12 @@ export const DossierTracking: React.FC<DossierTrackingProps> = ({ variant = 'lig
     }
   };
 
-  const envoyerPiece = async (type: PieceType, file: File | undefined) => {
-    if (!file || !dossier) return;
+  const envoyerPiece = async (type: PieceType, original: File | undefined) => {
+    if (!original || !dossier) return;
+    const file = await preparerFichier(original);
     const probleme = verifierFichier(file);
     if (probleme) {
-      setErreursPieces({ ...erreursPieces, [type]: probleme });
+      setErreursPieces((prev) => ({ ...prev, [type]: probleme }));
       return;
     }
     setEnvoiEnCours(type);

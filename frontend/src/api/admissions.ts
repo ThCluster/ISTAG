@@ -27,8 +27,41 @@ export const PIECES: { type: PieceType; label: string; hint: string }[] = [
   },
 ];
 
-export const TAILLE_MAX_PIECE = 5 * 1024 * 1024; // 5 Mo, comme le serveur
+export const TAILLE_MAX_PIECE = 4 * 1024 * 1024; // 4 Mo, comme le serveur
 export const EXTENSIONS_ACCEPTEES = '.pdf,.jpg,.jpeg,.png';
+
+// L'hébergeur (Vercel) refuse les requêtes de plus de 4,5 Mo : toutes les pièces
+// d'un dossier partent ensemble, donc leur total doit rester en dessous.
+export const TAILLE_MAX_ENVOI = 4 * 1024 * 1024;
+
+const COTE_MAX_IMAGE = 2000; // pixels : largement lisible pour un document
+const SEUIL_COMPRESSION = 500 * 1024; // on ne touche pas aux petites images
+
+/** Réduit une photo JPG/PNG (souvent 3 à 8 Mo sur un téléphone) en JPEG léger.
+ *  Les PDF et les petites images sont renvoyés tels quels. */
+export async function preparerFichier(file: File): Promise<File> {
+  const ext = file.name.toLowerCase().split('.').pop() || '';
+  if (!['jpg', 'jpeg', 'png'].includes(ext) || file.size <= SEUIL_COMPRESSION) return file;
+  try {
+    const image = await createImageBitmap(file);
+    const echelle = Math.min(1, COTE_MAX_IMAGE / Math.max(image.width, image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(image.width * echelle);
+    canvas.height = Math.round(image.height * echelle);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.fillStyle = '#ffffff'; // fond blanc pour les PNG transparents
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    image.close();
+    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, 'image/jpeg', 0.82));
+    if (!blob || blob.size >= file.size) return file;
+    const nom = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([blob], nom, { type: 'image/jpeg', lastModified: Date.now() });
+  } catch {
+    return file; // navigateur trop ancien : on envoie l'original
+  }
+}
 
 /** Vérification rapide avant envoi (le serveur revérifie de toute façon). */
 export function verifierFichier(file: File): string | null {
@@ -37,7 +70,7 @@ export function verifierFichier(file: File): string | null {
     return 'Format non accepté. Envoyez un PDF, JPG ou PNG.';
   }
   if (file.size > TAILLE_MAX_PIECE) {
-    return 'Fichier trop volumineux (maximum 5 Mo).';
+    return 'Fichier trop volumineux (maximum 4 Mo).';
   }
   return null;
 }
@@ -89,6 +122,9 @@ async function appeler<T>(chemin: string, init: RequestInit): Promise<T> {
       'Impossible de joindre le serveur ISTAG. Vérifiez votre connexion internet puis réessayez.'
     );
   }
+  if (res.status === 413) {
+    throw new ApiError('Documents trop volumineux. Envoyez des fichiers plus légers puis réessayez.');
+  }
 
   const data = await res.json().catch(() => null);
   if (res.ok) return data as T;
@@ -130,8 +166,19 @@ export function soumettrePreinscription(
     if (v === '') continue;
     body.append(k, typeof v === 'boolean' ? String(v) : v);
   }
+  let total = 0;
   for (const [type, file] of Object.entries(pieces)) {
-    if (file) body.append(CHAMP_PIECE[type as PieceType], file);
+    if (!file) continue;
+    total += file.size;
+    body.append(CHAMP_PIECE[type as PieceType], file);
+  }
+  if (total > TAILLE_MAX_ENVOI) {
+    return Promise.reject(
+      new ApiError(
+        "L'ensemble de vos documents dépasse 4 Mo. Remplacez les plus lourds par une photo " +
+          'ou un scan plus léger, puis réessayez.'
+      )
+    );
   }
   return appeler('/api/preinscriptions/', { method: 'POST', body });
 }

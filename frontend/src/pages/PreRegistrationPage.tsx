@@ -10,6 +10,7 @@ import {
   PIECE_DU_CHAMP,
   PIECES,
   PieceType,
+  preparerFichier,
   soumettrePreinscription,
   verifierFichier,
 } from '../api/admissions';
@@ -152,17 +153,20 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleFileChange = (type: PieceType, file: File | undefined) => {
+  const handleFileChange = async (type: PieceType, original: File | undefined) => {
     const key = `piece_${type}`;
-    if (!file) return;
+    if (!original) return;
+    const file = await preparerFichier(original);
     const probleme = verifierFichier(file);
     if (probleme) {
-      setErrors({ ...errors, [key]: probleme });
+      setErrors((prev) => ({ ...prev, [key]: probleme }));
       return;
     }
-    setFiles({ ...files, [type]: file });
-    const { [key]: _, ...reste } = errors;
-    setErrors(reste);
+    setFiles((prev) => ({ ...prev, [type]: file }));
+    setErrors((prev) => {
+      const { [key]: _, ...reste } = prev;
+      return reste;
+    });
   };
 
   const removeFile = (type: PieceType) => {
@@ -992,7 +996,7 @@ export const PreRegistrationPage: React.FC<PreRegistrationPageProps> = ({
                         <div className="p-4 bg-stone-50 border border-stone-200 rounded-sm text-xs text-[#667085] flex items-start gap-2">
                           <FileText className="w-4 h-4 text-[#08783F] shrink-0 mt-0.5" />
                           <p>
-                            Joignez une photo nette ou un scan de chaque document (<strong>PDF, JPG ou PNG, 5 Mo maximum</strong>).
+                            Joignez une photo nette ou un scan de chaque document (<strong>PDF, JPG ou PNG, 4 Mo maximum</strong>).
                             La scolarité les vérifie et vous contacte si l'un d'eux doit être corrigé : vous évitez ainsi un déplacement inutile.
                           </p>
                         </div>

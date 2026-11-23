@@ -2,12 +2,17 @@
 Paramètres Django du backend ISTAG (pré-inscriptions).
 
 Les valeurs sensibles se règlent par variables d'environnement :
-  DJANGO_SECRET_KEY, DJANGO_DEBUG, DJANGO_ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS,
-  FRONTEND_URL, DATA_DIR (dossier qui contient la base SQLite et les documents envoyés)
+  DJANGO_SECRET_KEY, DJANGO_DEBUG, DJANGO_ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS,
+  CORS_ALLOWED_ORIGINS, FRONTEND_URL,
+  DATABASE_URL (PostgreSQL en production ; SQLite local si absent),
+  R2_BUCKET, R2_ENDPOINT_URL, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+  (stockage privé des pièces justificatives ; dossier media/ local si absent).
 """
 
 import os
 from pathlib import Path
+
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,13 +30,14 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
 CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', '')
 
-# Render fournit automatiquement l'adresse publique du service.
-RENDER_HOST = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_HOST:
-    ALLOWED_HOSTS.append(RENDER_HOST)
-    CSRF_TRUSTED_ORIGINS.append(f'https://{RENDER_HOST}')
+# Vercel fournit automatiquement les adresses du déploiement (*.vercel.app).
+for variable in ('VERCEL_URL', 'VERCEL_PROJECT_PRODUCTION_URL', 'VERCEL_BRANCH_URL'):
+    hote = os.environ.get(variable)
+    if hote:
+        ALLOWED_HOSTS.append(hote)
+        CSRF_TRUSTED_ORIGINS.append(f'https://{hote}')
 
-# Derrière le proxy HTTPS de Render (nécessaire pour la connexion à l'admin).
+# Derrière le proxy HTTPS de Vercel (nécessaire pour la connexion à l'admin).
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
@@ -39,8 +45,8 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 3600
 
-# Dossier des données persistantes : base SQLite + pièces justificatives.
-# En production, il doit pointer vers un disque qui survit aux redéploiements.
+# En local : base SQLite et pièces dans ce dossier. Sur Vercel le disque n'est
+# pas conservé : la base est sur PostgreSQL et les pièces sur Cloudflare R2.
 DATA_DIR = Path(os.environ.get('DATA_DIR', BASE_DIR))
 
 # Adresse du site public (lien « Voir le site » du dashboard)
@@ -98,12 +104,14 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-# --- Base de données (SQLite) ---------------------------------------------
+# --- Base de données ------------------------------------------------------
+# DATABASE_URL (fournie par Neon / Vercel) → PostgreSQL ; sinon SQLite local.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': DATA_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{DATA_DIR / 'db.sqlite3'}",
+        conn_max_age=0,  # fonctions serverless : pas de connexion gardée ouverte
+        conn_health_checks=True,
+    )
 }
 
 
@@ -125,18 +133,42 @@ USE_TZ = True
 # --- Fichiers statiques & documents envoyés -------------------------------
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Sur Vercel, collectstatic n'est pas lancé : WhiteNoise lit directement les
+# fichiers statiques des applications (admin Django, admissions/static).
+WHITENOISE_USE_FINDERS = True
+
+# Les pièces justificatives ne sont JAMAIS servies publiquement : elles ne sont
+# accessibles que par le personnel connecté à l'admin (voir
+# admissions.views.piece_fichier). En production elles vont dans un bucket
+# Cloudflare R2 privé, en local dans le dossier media/.
+MEDIA_ROOT = DATA_DIR / 'media'
+R2_BUCKET = os.environ.get('R2_BUCKET')
+if R2_BUCKET:
+    STOCKAGE_PIECES = {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            'bucket_name': R2_BUCKET,
+            'endpoint_url': os.environ['R2_ENDPOINT_URL'],
+            'access_key': os.environ['R2_ACCESS_KEY_ID'],
+            'secret_key': os.environ['R2_SECRET_ACCESS_KEY'],
+            'region_name': 'auto',
+            'signature_version': 's3v4',
+            'default_acl': None,  # bucket privé
+            'file_overwrite': False,
+            'querystring_auth': True,
+        },
+    }
+else:
+    STOCKAGE_PIECES = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}
+
 STORAGES = {
-    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'default': STOCKAGE_PIECES,
     'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage'},
 }
 
-# Les pièces justificatives sont stockées ici. Ce dossier n'est JAMAIS servi
-# publiquement : les fichiers ne sont accessibles que par le personnel connecté
-# à l'admin (voir admissions.views.piece_fichier).
-MEDIA_ROOT = DATA_DIR / 'media'
-
-# Taille maximale d'une pièce justificative (en octets)
-ADMISSIONS_TAILLE_MAX_PIECE = 5 * 1024 * 1024  # 5 Mo
+# Taille maximale d'une pièce justificative (en octets). Vercel refuse les
+# requêtes de plus de 4,5 Mo : le site compresse les photos avant l'envoi.
+ADMISSIONS_TAILLE_MAX_PIECE = 4 * 1024 * 1024  # 4 Mo
 
 
 # --- API ------------------------------------------------------------------
