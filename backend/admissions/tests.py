@@ -365,3 +365,53 @@ class ListesTailwindTests(TestCase):
         r = self.client.get(reverse('admin:auth_user_change', args=[self.admin.pk]))
         self.assertContains(r, 'tailwind-admin.css')
         self.assertContains(r, 'Comptes du personnel')
+
+
+class StockageVercelBlobTests(TestCase):
+    """L'adaptateur Vercel Blob, avec un faux service en mémoire."""
+
+    def setUp(self):
+        from types import SimpleNamespace
+        from unittest import mock
+
+        from vercel.blob import BlobNotFoundError
+
+        from config import stockage
+
+        self.fichiers = {}
+        self.appels_put = []
+
+        def put_blob(name, data, *, access, content_type=None, **kw):
+            self.appels_put.append((name, access, content_type))
+            self.fichiers[name] = data
+            return SimpleNamespace(pathname=name)
+
+        def lire(name, access=None):
+            if name not in self.fichiers:
+                raise BlobNotFoundError('absent')
+            return SimpleNamespace(body=self.fichiers[name], size=len(self.fichiers[name]))
+
+        faux = SimpleNamespace(
+            put_blob=put_blob,
+            get_blob=lambda name, *, access: lire(name, access),
+            head_blob=lire,
+            delete_blob=lambda name: self.fichiers.pop(name, None),
+        )
+        patch = mock.patch.object(stockage, 'blob', faux)
+        patch.start()
+        self.addCleanup(patch.stop)
+        self.stockage = stockage.VercelBlobPriveStorage()
+
+    def test_enregistre_en_prive_relit_et_supprime(self):
+        nom = self.stockage.save('pieces/1/photo-ab.png', SimpleUploadedFile('p.png', b'\x89PNG\r\n\x1a\nxx'))
+        self.assertEqual(self.appels_put, [('pieces/1/photo-ab.png', 'private', 'image/png')])
+        self.assertTrue(self.stockage.exists(nom))
+        self.assertEqual(self.stockage.size(nom), 10)
+        with self.stockage.open(nom) as fh:
+            self.assertEqual(fh.read(), b'\x89PNG\r\n\x1a\nxx')
+        self.stockage.delete(nom)
+        self.assertFalse(self.stockage.exists(nom))
+
+    def test_fichier_absent(self):
+        with self.assertRaises(FileNotFoundError):
+            self.stockage.open('pieces/inconnu.pdf')

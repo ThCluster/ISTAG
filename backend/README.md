@@ -52,7 +52,7 @@ Statuts : Reçue → En cours d'examen → (À compléter) → Admis(e) → Insc
 - Les pièces sont dans `media/`, **jamais servies publiquement** : seul le personnel connecté à l'admin peut les ouvrir.
 - Limite d'envois par IP (10 dépôts/heure, 60 consultations/heure), champ piège anti-robots, vérification du vrai format des fichiers.
 - En production : définir `FRONTEND_URL`, `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=False`, `DJANGO_ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`,
-  `DATABASE_URL` (PostgreSQL) et les variables `R2_*` (stockage privé des pièces).
+  `DATABASE_URL` (PostgreSQL) et un store Vercel Blob privé (stockage des pièces).
 
 ## Tests
 
@@ -63,7 +63,7 @@ python manage.py test admissions
 ## Déploiement sur Vercel (domaine istag.ci)
 
 Vercel ne conserve aucun fichier sur le serveur. La base de données est donc sur
-**PostgreSQL (Neon)** et les pièces justificatives sur un bucket **Cloudflare R2 privé**.
+**PostgreSQL (Neon)** et les pièces justificatives dans un store **Vercel Blob privé**.
 Vercel refuse aussi les requêtes de plus de 4,5 Mo : c'est pourquoi les pièces
 d'un dossier sont limitées à 4 Mo au total (les photos sont compressées par le site).
 
@@ -72,19 +72,17 @@ d'un dossier sont limitées à 4 Mo au total (les photos sont compressées par l
 | `https://istag.ci` (+ `www.istag.ci`) | frontend | `frontend` |
 | `https://api.istag.ci` (API + dashboard `/admin/`) | backend | `backend` |
 
-### 1. Stockage des pièces : Cloudflare R2
-
-1. Sur dash.cloudflare.com → **R2** → *Create bucket* `istag-pieces` (laisser l'accès public **désactivé**).
-2. *Manage R2 API Tokens* → *Create API token*, permission **Object Read & Write** sur ce bucket.
-3. Noter l'*Access Key ID*, la *Secret Access Key* et l'endpoint `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`.
-
-### 2. Projet Vercel « backend »
+### 1. Projet Vercel « backend »
 
 *Add New → Project* → importer le dépôt GitHub, **Root Directory : `backend`**
 (le fichier `backend/vercel.json` configure le reste).
 
 Base de données : onglet **Storage → Create Database → Neon (Postgres)** et la relier au projet :
 la variable `DATABASE_URL` est ajoutée automatiquement.
+
+Pièces justificatives : **Storage → Create Database → Blob**, accès **Private**
+(impossible à changer ensuite), puis le relier au projet : `BLOB_READ_WRITE_TOKEN`
+est ajoutée automatiquement.
 
 Variables d'environnement (*Settings → Environment Variables*) :
 
@@ -96,9 +94,6 @@ Variables d'environnement (*Settings → Environment Variables*) :
 | `CSRF_TRUSTED_ORIGINS` | `https://api.istag.ci` |
 | `CORS_ALLOWED_ORIGINS` | `https://istag.ci,https://www.istag.ci` |
 | `FRONTEND_URL` | `https://istag.ci` |
-| `R2_BUCKET` | `istag-pieces` |
-| `R2_ENDPOINT_URL` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
-| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` | les clés du token R2 |
 
 Créer les tables et le compte admin **depuis ton PC** (une fois, puis à chaque nouvelle migration),
 avec l'adresse Neon copiée depuis Vercel :
@@ -114,13 +109,13 @@ Remove-Item Env:DATABASE_URL
 
 *Settings → Domains* → ajouter `api.istag.ci`.
 
-### 3. Projet Vercel « frontend »
+### 2. Projet Vercel « frontend »
 
 *Add New → Project* → même dépôt, **Root Directory : `frontend`** (Vite est détecté).
 Variable : `VITE_API_URL` = `https://api.istag.ci` (puis redéployer si ajoutée après coup).
 *Settings → Domains* → ajouter `istag.ci` et `www.istag.ci` (redirection de `www` vers `istag.ci`).
 
-### 4. DNS chez TPCloud
+### 3. DNS chez TPCloud
 
 Dans l'espace client TPCloud → *Domaines → istag.ci → Gestion DNS / Zone DNS* :
 

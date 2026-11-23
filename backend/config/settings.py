@@ -5,14 +5,15 @@ Les valeurs sensibles se règlent par variables d'environnement :
   DJANGO_SECRET_KEY, DJANGO_DEBUG, DJANGO_ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS,
   CORS_ALLOWED_ORIGINS, FRONTEND_URL,
   DATABASE_URL (PostgreSQL en production ; SQLite local si absent),
-  R2_BUCKET, R2_ENDPOINT_URL, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
-  (stockage privé des pièces justificatives ; dossier media/ local si absent).
+  BLOB_READ_WRITE_TOKEN / BLOB_STORE_ID (store Vercel Blob privé pour les pièces
+  justificatives, ajoutés par Vercel ; dossier media/ local si absents).
 """
 
 import os
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -46,7 +47,7 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 3600
 
 # En local : base SQLite et pièces dans ce dossier. Sur Vercel le disque n'est
-# pas conservé : la base est sur PostgreSQL et les pièces sur Cloudflare R2.
+# pas conservé : la base est sur PostgreSQL et les pièces sur Vercel Blob.
 DATA_DIR = Path(os.environ.get('DATA_DIR', BASE_DIR))
 
 # Adresse du site public (lien « Voir le site » du dashboard)
@@ -139,25 +140,16 @@ WHITENOISE_USE_FINDERS = True
 
 # Les pièces justificatives ne sont JAMAIS servies publiquement : elles ne sont
 # accessibles que par le personnel connecté à l'admin (voir
-# admissions.views.piece_fichier). En production elles vont dans un bucket
-# Cloudflare R2 privé, en local dans le dossier media/.
+# admissions.views.piece_fichier). En production elles vont dans un store
+# Vercel Blob privé, en local dans le dossier media/.
 MEDIA_ROOT = DATA_DIR / 'media'
-R2_BUCKET = os.environ.get('R2_BUCKET')
-if R2_BUCKET:
-    STOCKAGE_PIECES = {
-        'BACKEND': 'storages.backends.s3.S3Storage',
-        'OPTIONS': {
-            'bucket_name': R2_BUCKET,
-            'endpoint_url': os.environ['R2_ENDPOINT_URL'],
-            'access_key': os.environ['R2_ACCESS_KEY_ID'],
-            'secret_key': os.environ['R2_SECRET_ACCESS_KEY'],
-            'region_name': 'auto',
-            'signature_version': 's3v4',
-            'default_acl': None,  # bucket privé
-            'file_overwrite': False,
-            'querystring_auth': True,
-        },
-    }
+if os.environ.get('BLOB_STORE_ID') or os.environ.get('BLOB_READ_WRITE_TOKEN'):
+    STOCKAGE_PIECES = {'BACKEND': 'config.stockage.VercelBlobPriveStorage'}
+elif os.environ.get('VERCEL'):
+    # Sur Vercel le disque est effacé : sans store Blob, les pièces seraient perdues.
+    raise ImproperlyConfigured(
+        'Aucun store Vercel Blob relié au projet (BLOB_READ_WRITE_TOKEN manquant).'
+    )
 else:
     STOCKAGE_PIECES = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}
 
